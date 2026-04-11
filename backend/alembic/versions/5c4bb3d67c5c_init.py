@@ -1,8 +1,8 @@
 """init
 
-Revision ID: 59ecca971a57
+Revision ID: 5c4bb3d67c5c
 Revises: 
-Create Date: 2026-04-06 17:48:12.848263
+Create Date: 2026-04-12 01:07:35.964828
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '59ecca971a57'
+revision: str = '5c4bb3d67c5c'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -33,7 +33,6 @@ def upgrade() -> None:
     op.create_table('analyses',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('file_name', sa.String(length=255), nullable=False),
-    sa.Column('file_type', sa.String(length=20), nullable=False),
     sa.Column('mime_type', sa.String(length=100), nullable=False),
     sa.Column('file_size', sa.BigInteger(), nullable=False),
     sa.Column('storage_key', sa.String(length=500), nullable=False),
@@ -47,7 +46,6 @@ def upgrade() -> None:
     sa.Column('error_message', sa.Text(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('NOW()'), nullable=False),
     sa.Column('finished_at', sa.DateTime(timezone=True), nullable=True),
-    sa.CheckConstraint("file_type IN ('text', 'image', 'video')", name='ck_analyses_file_type'),
     sa.CheckConstraint("model_type IN ('text', 'image', 'video', 'multimodal')", name='ck_analyses_model_type'),
     sa.CheckConstraint("result_label IN ('REAL', 'FAKE')", name='ck_analyses_result_label'),
     sa.CheckConstraint("status IN ('processing', 'success', 'failed')", name='ck_analyses_status'),
@@ -57,7 +55,6 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_analyses_created_at'), 'analyses', ['created_at'], unique=False)
-    op.create_index(op.f('ix_analyses_file_type'), 'analyses', ['file_type'], unique=False)
     op.create_index(op.f('ix_analyses_model_type'), 'analyses', ['model_type'], unique=False)
     op.create_index(op.f('ix_analyses_status'), 'analyses', ['status'], unique=False)
     op.create_table('analysis_logs',
@@ -82,7 +79,6 @@ def downgrade() -> None:
     op.drop_table('analysis_logs')
     op.drop_index(op.f('ix_analyses_status'), table_name='analyses')
     op.drop_index(op.f('ix_analyses_model_type'), table_name='analyses')
-    op.drop_index(op.f('ix_analyses_file_type'), table_name='analyses')
     op.drop_index(op.f('ix_analyses_created_at'), table_name='analyses')
     op.drop_table('analyses')
     op.drop_index(op.f('ix_admin_users_username'), table_name='admin_users')
