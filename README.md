@@ -28,12 +28,12 @@ uvicorn app.main:app --reload
 
 ## 2.1 Node.js 설치
 
-## 2.2 관리자 페이지 (5174)
+## 2.2 관리자 페이지 (Port: 5174)
 frontend\admin에서:\
 npm install\
 npm run dev
 
-## 2.3 사용자 페이지 (5173)
+## 2.3 사용자 페이지 (Port: 5173)
 frontend\user에서:\
 npm install\
 npm run dev
