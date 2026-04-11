@@ -5,7 +5,6 @@ from pydantic import BaseModel, ConfigDict
 
 
 AnalysisStatus = Literal["processing", "success", "failed"]
-FileType = Literal["text", "image", "video"]
 ResultLabel = Literal["REAL", "FAKE"]
 ModelType = Literal["text", "image", "video", "multimodal"]
 
@@ -21,7 +20,6 @@ class AnalysisLogRead(BaseModel):
 
 class AnalysisCreate(BaseModel):
     file_name: str
-    file_type: FileType
     mime_type: str
     file_size: int
     storage_key: str
@@ -42,7 +40,6 @@ class AnalysisUpdateResult(BaseModel):
 class AnalysisRead(BaseModel):
     id: UUID
     file_name: str
-    file_type: FileType
     mime_type: str
     file_size: int
     storage_key: str

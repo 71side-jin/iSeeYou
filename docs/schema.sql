@@ -1,7 +1,6 @@
 CREATE TABLE analyses (
     id UUID PRIMARY KEY,
     file_name VARCHAR(255) NOT NULL,
-    file_type VARCHAR(20) NOT NULL CHECK (file_type IN ('text', 'image', 'video')),
     mime_type VARCHAR(100) NOT NULL,
     file_size BIGINT NOT NULL CHECK (file_size >= 0),
     storage_key VARCHAR(500) NOT NULL,
@@ -19,7 +18,6 @@ CREATE TABLE analyses (
 
 CREATE INDEX ix_analyses_created_at ON analyses (created_at);
 CREATE INDEX ix_analyses_status ON analyses (status);
-CREATE INDEX ix_analyses_file_type ON analyses (file_type);
 CREATE INDEX ix_analyses_model_type ON analyses (model_type);
 
 CREATE TABLE analysis_logs (

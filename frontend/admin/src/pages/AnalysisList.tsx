@@ -3,10 +3,10 @@ import { useEffect, useState } from "react";
 type Analysis = {
   id: string;
   file_name: string;
-  file_type: string;
+  mime_type: string;
   status: string;
-  result_label: string;
-  confidence: number;
+  result_label: string | null;
+  confidence: number | null;
   created_at: string;
 };
 
@@ -33,7 +33,7 @@ export default function AnalysisList() {
         <thead>
           <tr>
             <th>파일명</th>
-            <th>타입</th>
+            <th>MIME 타입</th>
             <th>결과</th>
             <th>신뢰도</th>
             <th>상태</th>
@@ -45,9 +45,9 @@ export default function AnalysisList() {
           {data.map((item) => (
             <tr key={item.id}>
               <td>{item.file_name}</td>
-              <td>{item.file_type}</td>
-              <td>{item.result_label}</td>
-              <td>{item.confidence?.toFixed(2)}</td>
+              <td>{item.mime_type}</td>
+              <td>{item.result_label ?? "-"}</td>
+              <td>{item.confidence != null ? item.confidence.toFixed(2) : "-"}</td>
               <td>{item.status}</td>
               <td>{new Date(item.created_at).toLocaleString()}</td>
             </tr>

@@ -6,8 +6,6 @@
 ### columns
 - id: UUID, PK
 - file_name: VARCHAR(255), NOT NULL
-- file_type: VARCHAR(20), NOT NULL
-  - allowed: `text`, `image`, `video`
 - mime_type: VARCHAR(100), NOT NULL
 - file_size: BIGINT, NOT NULL
   - 저장된 파일 크기(byte)
@@ -39,7 +37,6 @@
 ### indexes
 - index on `created_at`
 - index on `status`
-- index on `file_type`
 - index on `model_type`
 
 ---

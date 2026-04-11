@@ -18,7 +18,6 @@ class Analysis(Base):
     __tablename__ = "analyses"
 
     __table_args__ = (
-        CheckConstraint("file_type IN ('text', 'image', 'video')", name="ck_analyses_file_type"),
         CheckConstraint("status IN ('processing', 'success', 'failed')", name="ck_analyses_status"),
         CheckConstraint("result_label IN ('REAL', 'FAKE')", name="ck_analyses_result_label"),
         CheckConstraint("model_type IN ('text', 'image', 'video', 'multimodal')", name="ck_analyses_model_type"),
@@ -29,7 +28,6 @@ class Analysis(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     file_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    file_type: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
     file_size: Mapped[int] = mapped_column(BigInteger, nullable=False)
     storage_key: Mapped[str] = mapped_column(String(500), nullable=False)
