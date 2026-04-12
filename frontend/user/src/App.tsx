@@ -61,7 +61,7 @@ type CategoryConfig = {
 
 type Analysis = {
   verdictLabel: string
-  fakePercent: numberf
+  fakePercent: number
   realPercent: number
   confidence: number
   summary: string
@@ -463,6 +463,10 @@ async function requestAnalysis(params: {
 
   if (!fileToSend) throw new Error('file is required')
 
+  if (!isAllowedFile(category, fileToSend)) {
+    throw new Error(getAllowedFileMessage(category))
+  }
+
   const formData = new FormData()
   formData.append('file', fileToSend)
   formData.append('fileName', fileName)
@@ -675,18 +679,75 @@ function CategoryGlyph({ category }: { category: CategoryId }) {
   return <svg viewBox="0 0 24 24" aria-hidden="true" className="category-glyph"><path d={path} /></svg>
 }
 
-function UploadZone({ category, upload, onUploadState }: { category: CategoryConfig; upload: UploadState; onUploadState: Dispatch<SetStateAction<UploadState>> }) {
+function getAllowedFileMessage(category: CategoryConfig) {
+  if (category.uploadKind === 'text') {
+    return '이 페이지에서는 TXT 파일만 업로드할 수 있습니다.'
+  }
+
+  if (category.uploadKind === 'image') {
+    return '이 페이지에서는 이미지 파일만 업로드할 수 있습니다.'
+  }
+
+  return '이 페이지에서는 비디오 파일만 업로드할 수 있습니다.'
+}
+
+function isAllowedFile(category: CategoryConfig, file: File) {
+  const fileName = file.name.toLowerCase()
+  const mimeType = file.type.toLowerCase()
+
+  if (category.uploadKind === 'text') {
+    return mimeType === 'text/plain' || fileName.endsWith('.txt')
+  }
+
+  if (category.uploadKind === 'image') {
+    return mimeType.startsWith('image/')
+  }
+
+  if (category.uploadKind === 'video') {
+    return mimeType.startsWith('video/')
+  }
+
+  return false
+}
+
+function UploadZone({
+  category,
+  upload,
+  onUploadState,
+}: {
+  category: CategoryConfig
+  upload: UploadState
+  onUploadState: Dispatch<SetStateAction<UploadState>>
+}) {
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   const setFile = async (file: File | null) => {
     if (!file) return
+
+    if (!isAllowedFile(category, file)) {
+      alert(getAllowedFileMessage(category))
+      return
+    }
+
     onUploadState((current) => {
-      if (current.previewUrl) URL.revokeObjectURL(current.previewUrl)
-      return { ...current, file, previewUrl: category.uploadKind === 'text' ? '' : URL.createObjectURL(file) }
+      if (current.previewUrl) {
+        URL.revokeObjectURL(current.previewUrl)
+      }
+
+      return {
+        ...current,
+        file,
+        previewUrl: category.uploadKind === 'text' ? '' : URL.createObjectURL(file),
+      }
     })
+
     if (category.uploadKind === 'text') {
       const content = await file.text()
-      onUploadState((current) => ({ ...current, file, textValue: content }))
+      onUploadState((current) => ({
+        ...current,
+        file,
+        textValue: content,
+      }))
     }
   }
 
@@ -700,23 +761,73 @@ function UploadZone({ category, upload, onUploadState }: { category: CategoryCon
     onUploadState((current) => ({ ...current, dragging: false }))
     await setFile(event.dataTransfer.files?.[0] ?? null)
   }
+
   return (
-    <section className={`upload-surface ${upload.dragging ? 'is-dragging' : ''}`} onDragOver={(event) => { event.preventDefault(); onUploadState((current) => ({ ...current, dragging: true })) }} onDragLeave={() => onUploadState((current) => ({ ...current, dragging: false }))} onDrop={onDrop}>
-      <input ref={inputRef} type="file" accept={category.uploadAccept} hidden onChange={onFileChange} />
+    <section
+      className={`upload-surface ${upload.dragging ? 'is-dragging' : ''}`}
+      onDragOver={(event) => {
+        event.preventDefault()
+        onUploadState((current) => ({ ...current, dragging: true }))
+      }}
+      onDragLeave={() =>
+        onUploadState((current) => ({ ...current, dragging: false }))
+      }
+      onDrop={onDrop}
+    >
+      <input
+        ref={inputRef}
+        type="file"
+        accept={category.uploadAccept}
+        hidden
+        onChange={onFileChange}
+      />
+
       <div className="upload-stage">
         {category.uploadKind === 'text' ? (
-          <textarea className="upload-textarea" placeholder={category.inputHint} value={upload.textValue} onChange={(event) => onUploadState((current) => ({ ...current, textValue: event.target.value }))} />
+          <textarea
+            className="upload-textarea"
+            placeholder={category.inputHint}
+            value={upload.textValue}
+            onChange={(event) =>
+              onUploadState((current) => ({
+                ...current,
+                textValue: event.target.value,
+              }))
+            }
+          />
         ) : upload.previewUrl && upload.file?.type.startsWith('image/') ? (
-          <img src={upload.previewUrl} alt="preview" className="upload-preview-image" />
+          <img
+            src={upload.previewUrl}
+            alt="preview"
+            className="upload-preview-image"
+          />
         ) : upload.previewUrl && upload.file?.type.startsWith('video/') ? (
-          <video src={upload.previewUrl} className="upload-preview-video" controls />
+          <video
+            src={upload.previewUrl}
+            className="upload-preview-video"
+            controls
+          />
         ) : (
-          <div className="upload-placeholder"><CategoryGlyph category={category.id} /><strong>{categoryNameKo(category.id)} 분석 스튜디오</strong><span>{category.inputHint}</span></div>
+          <div className="upload-placeholder">
+            <CategoryGlyph category={category.id} />
+            <strong>{categoryNameKo(category.id)} 분석 스튜디오</strong>
+            <span>{category.inputHint}</span>
+          </div>
         )}
       </div>
+
       <div className="upload-toolbar">
-        <div><span className="upload-label">{category.kicker}</span><strong>{upload.file?.name ?? '파일을 올려 주세요'}</strong></div>
-        <button type="button" className="secondary-cta" onClick={() => inputRef.current?.click()}>{category.uploadKind === 'text' ? 'TXT 업로드' : '파일 선택'}</button>
+        <div>
+          <span className="upload-label">{category.kicker}</span>
+          <strong>{upload.file?.name ?? '파일을 올려 주세요'}</strong>
+        </div>
+        <button
+          type="button"
+          className="secondary-cta"
+          onClick={() => inputRef.current?.click()}
+        >
+          {category.uploadKind === 'text' ? 'TXT 업로드' : '파일 선택'}
+        </button>
       </div>
     </section>
   )
@@ -842,9 +953,24 @@ function StudioPage({ category, onBack }: { category: CategoryConfig; onBack: ()
     } catch (error) {
       console.error(error)
       if (timerRef.current) window.clearInterval(timerRef.current)
-      setProgress(100)
-      setAnalysis(buildAnalysis(category, activeProfile, upload))
-      setErrorMessage('실시간 API 연결에 실패해 데모 분석 결과로 전환했습니다.')
+
+      const message =
+        error instanceof Error ? error.message : '분석 중 오류가 발생했습니다.'
+
+      const isFileTypeError =
+        message.includes('TXT 파일만 업로드할 수 있습니다.') ||
+        message.includes('이미지 파일만 업로드할 수 있습니다.') ||
+        message.includes('비디오 파일만 업로드할 수 있습니다.')
+
+      if (isFileTypeError) {
+        setProgress(0)
+        setAnalysis(null)
+        setErrorMessage(message)
+      } else {
+        setProgress(100)
+        setAnalysis(buildAnalysis(category, activeProfile, upload))
+        setErrorMessage('실시간 API 연결에 실패해 데모 분석 결과로 전환했습니다.')
+      }
     } finally {
       setIsAnalyzing(false)
     }
