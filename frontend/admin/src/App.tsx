@@ -1,3 +1,4 @@
+import "./App.css";
 import AnalysisList from "./pages/AnalysisList";
 
 export default function App() {
