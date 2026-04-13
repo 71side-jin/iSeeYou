@@ -859,7 +859,11 @@ function ResultDashboard({ analysis, upload, category, profile }: { analysis: An
   return (
     <section className="result-dashboard">
       <div className="result-summary">
-        <div className="summary-copy"><span className="eyebrow">{category.kicker}</span><h2>{analysis.summary}</h2><p>{profile.title} / {profile.badge} / {profile.xai}</p></div>
+        <div className="summary-copy">
+          <span className="eyebrow">{category.kicker}</span>
+          <h2>{analysis.summary}</h2>
+          <p>{profile.title} / {profile.badge} / {profile.xai}</p>
+        </div>
         <article className="confidence-dial">
           <div className="confidence-ring" style={{ backgroundImage: `conic-gradient(from 180deg, rgba(63,197,255,0.2) 0deg, rgba(118,255,204,0.9) ${analysis.fakePercent * 1.8}deg, rgba(255,255,255,0.08) ${analysis.fakePercent * 3.6}deg, rgba(255,255,255,0.04) 360deg)` }}>
             <div className="confidence-core"><span>{analysis.verdictLabel}</span><strong>{formatPercent(Math.max(analysis.fakePercent, analysis.realPercent))}</strong><small>confidence {analysis.confidence}%</small></div>
@@ -1015,7 +1019,9 @@ function StudioPage({ category, onBack }: { category: CategoryConfig; onBack: ()
           <ProgressRail stages={category.stageLabels} progress={progress} isAnalyzing={isAnalyzing} />
         </section>
 
-        <aside className="studio-result-panel">{analysis ? <ResultDashboard analysis={analysis} upload={upload} category={category} profile={activeProfile} /> : <ResultPanelPlaceholder profile={activeProfile} category={category} />}</aside>
+        <aside className="studio-result-panel">
+          {analysis ? <ResultDashboard analysis={analysis} upload={upload} category={category} profile={activeProfile} /> : <ResultPanelPlaceholder profile={activeProfile} category={category} />}
+        </aside>
       </section>
     </main>
   )
