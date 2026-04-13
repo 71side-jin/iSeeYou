@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from sqlalchemy import (
     BigInteger,
     CheckConstraint,
@@ -39,13 +40,13 @@ class Analysis(Base):
     model_name: Mapped[str] = mapped_column(String(100), nullable=False)
     inference_time_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[str] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         server_default=text("NOW()"),
         index=True,
     )
-    finished_at: Mapped[str | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     logs: Mapped[list["AnalysisLog"]] = relationship(
         "AnalysisLog",
@@ -66,7 +67,7 @@ class AnalysisLog(Base):
     )
     event_type: Mapped[str] = mapped_column(String(50), nullable=False)
     message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[str] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         server_default=text("NOW()"),
