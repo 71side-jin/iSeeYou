@@ -31,27 +31,6 @@ type AnalysisDetail = {
   }[];
 };
 
-const MODEL_NAME_MAP: Record<string, string[]> = {
-  text: ["text-ai-detector", "text-fact-check"],
-  image: ["image-fast", "image-precision"],
-  video: [
-    "video-openclip",
-    "video-flava",
-    "video-blip-nli",
-    "video-avsync",
-    "video-frequency",
-    "video-scenegraph",
-  ],
-  multimodal: [
-    "mm-openclip",
-    "mm-flava",
-    "mm-blip-nli",
-    "mm-avsync",
-    "mm-frequency",
-    "mm-scenegraph",
-  ],
-};
-
 const MODEL_TYPE_OPTIONS = ["text", "image", "video", "multimodal"];
 const STATUS_OPTIONS = ["processing", "success", "failed"];
 const RESULT_OPTIONS = ["REAL", "FAKE"];
@@ -75,31 +54,14 @@ export default function AnalysisList() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
-  const modelNameOptions = useMemo(() => {
-    if (modelTypeFilter === "all") return [];
-    return MODEL_NAME_MAP[modelTypeFilter] ?? [];
-  }, [modelTypeFilter]);
-
-  useEffect(() => {
-    if (modelTypeFilter === "all") {
-      setModelNameFilter("all");
-      return;
-    }
-    const valid = MODEL_NAME_MAP[modelTypeFilter] ?? [];
-    if (!valid.includes(modelNameFilter)) {
-      setModelNameFilter("all");
-    }
-  }, [modelTypeFilter, modelNameFilter]);
+  // 🔥 핵심: 선택된 아이템 찾기
+  const selectedItem = useMemo(() => {
+    return data.find((d) => d.id === selectedId);
+  }, [data, selectedId]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [
-    statusFilter,
-    resultFilter,
-    modelTypeFilter,
-    modelNameFilter,
-    sortOrder,
-  ]);
+  }, [statusFilter, resultFilter, modelTypeFilter, modelNameFilter, sortOrder]);
 
   // 목록 fetch
   useEffect(() => {
@@ -110,10 +72,8 @@ export default function AnalysisList() {
 
     if (statusFilter !== "all") params.set("status", statusFilter);
     if (resultFilter !== "all") params.set("result_label", resultFilter);
-    if (modelTypeFilter !== "all")
-      params.set("model_type", modelTypeFilter);
-    if (modelNameFilter !== "all")
-      params.set("model_name", modelNameFilter);
+    if (modelTypeFilter !== "all") params.set("model_type", modelTypeFilter);
+    if (modelNameFilter !== "all") params.set("model_name", modelNameFilter);
 
     setLoading(true);
 
@@ -125,16 +85,9 @@ export default function AnalysisList() {
         setTotalCount(res.total);
         setLoading(false);
       });
-  }, [
-    currentPage,
-    statusFilter,
-    resultFilter,
-    modelTypeFilter,
-    modelNameFilter,
-    sortOrder,
-  ]);
+  }, [currentPage, statusFilter, resultFilter, modelTypeFilter, modelNameFilter, sortOrder]);
 
-  // 상세 fetch
+  // detail fetch (logs용)
   useEffect(() => {
     if (!selectedId) return;
 
@@ -165,9 +118,7 @@ export default function AnalysisList() {
     return (
       <div className="admin-shell">
         <main className="admin-page">
-          <section className="admin-loading-panel">
-            Loading...
-          </section>
+          <section className="admin-loading-panel">Loading...</section>
         </main>
       </div>
     );
@@ -175,138 +126,211 @@ export default function AnalysisList() {
 
   return (
     <div className="admin-shell">
-      <main className="admin-page">
-        {/* HERO */}
-        <section className="admin-hero">
-          <div className="admin-hero-copy">분석 결과 목록</div>
+      <main className={`admin-page ${detail ? "has-panel" : ""}`}>
 
-          <div className="admin-hero-stats">
-            <div className="admin-stat-card">
-              <span>전체 결과</span>
-              <strong>{totalCount}</strong>
+        {/* LEFT */}
+        <div className="admin-main">
+
+          <section className="admin-hero">
+            <div className="admin-hero-copy">분석 결과 목록</div>
+
+            <div className="admin-hero-stats">
+              <div className="admin-stat-card">
+                <span>전체 결과</span>
+                <strong>{totalCount}</strong>
+              </div>
+              <div className="admin-stat-card">
+                <span>현재 페이지</span>
+                <strong>{currentPage}</strong>
+              </div>
+              <div className="admin-stat-card">
+                <span>총 페이지</span>
+                <strong>{totalPages}</strong>
+              </div>
             </div>
-            <div className="admin-stat-card">
-              <span>현재 페이지</span>
-              <strong>{currentPage}</strong>
-            </div>
-            <div className="admin-stat-card">
-              <span>총 페이지</span>
-              <strong>{totalPages}</strong>
-            </div>
-          </div>
-        </section>
+          </section>
 
-        {/* FILTER */}
-        <section className="admin-filter-panel">
-          <FilterField label="상태" value={statusFilter} onChange={setStatusFilter} options={[{ value: "all", label: "전체" }, ...STATUS_OPTIONS.map((s) => ({ value: s, label: s }))]} />
-          <FilterField label="결과" value={resultFilter} onChange={setResultFilter} options={[{ value: "all", label: "전체" }, ...RESULT_OPTIONS.map((r) => ({ value: r, label: r }))]} />
-          <FilterField label="모델 타입" value={modelTypeFilter} onChange={setModelTypeFilter} options={[{ value: "all", label: "전체" }, ...MODEL_TYPE_OPTIONS.map((t) => ({ value: t, label: t }))]} />
-          <FilterField label="모델 이름" value={modelNameFilter} onChange={setModelNameFilter} disabled={modelTypeFilter === "all"} options={[{ value: "all", label: "전체" }, ...modelNameOptions.map((n) => ({ value: n, label: n }))]} />
-          <FilterField label="시간 정렬" value={sortOrder} onChange={(v) => setSortOrder(v as "asc" | "desc")} options={[{ value: "desc", label: "최신순" }, { value: "asc", label: "오래된순" }]} />
-        </section>
+          <section className="admin-filter-panel">
+            <FilterField label="상태" value={statusFilter} onChange={setStatusFilter}
+              options={[{ value: "all", label: "전체" }, ...STATUS_OPTIONS.map(s => ({ value: s, label: s }))]} />
+            <FilterField label="결과" value={resultFilter} onChange={setResultFilter}
+              options={[{ value: "all", label: "전체" }, ...RESULT_OPTIONS.map(r => ({ value: r, label: r }))]} />
+            <FilterField label="모델 타입" value={modelTypeFilter} onChange={setModelTypeFilter}
+              options={[{ value: "all", label: "전체" }, ...MODEL_TYPE_OPTIONS.map(t => ({ value: t, label: t }))]} />
+            <FilterField label="시간 정렬" value={sortOrder}
+              onChange={(v) => setSortOrder(v as "asc" | "desc")}
+              options={[{ value: "desc", label: "최신순" }, { value: "asc", label: "오래된순" }]} />
+          </section>
 
-        <div className="admin-total-row">총 {totalCount}개</div>
+          <div className="admin-total-row">총 {totalCount}개</div>
 
-        {/* TABLE */}
-        <section className="admin-table-panel">
-          <div className="admin-table-scroll">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <Th>파일명</Th>
-                  <Th>상태</Th>
-                  <Th>결과</Th>
-                  <Th>신뢰도</Th>
-                  <Th>모델 타입</Th>
-                  <Th>모델 이름</Th>
-                  <Th>시간</Th>
-                </tr>
-              </thead>
+          <section className="admin-table-panel">
+            <div className="admin-table-scroll">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <Th>파일명</Th>
+                    <Th>상태</Th>
+                    <Th>결과</Th>
+                    <Th>신뢰도</Th>
+                    <Th>모델 타입</Th>
+                    <Th>모델 이름</Th>
+                    <Th>시간</Th>
+                  </tr>
+                </thead>
 
-              <tbody>
-                {data.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="admin-row"
-                    onClick={() => setSelectedId(item.id)}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <Td className="is-file">{item.file_name}</Td>
-                    <Td>
-                      <span className={`admin-badge status-${item.status}`}>
-                        {item.status}
-                      </span>
-                    </Td>
-                    <Td>
-                      {item.result_label && (
+                <tbody>
+                  {data.map((item) => (
+                    <tr key={item.id} className="admin-row"
+                        onClick={() => setSelectedId(item.id)}>
+                      <Td className="is-file">{item.file_name}</Td>
+                      <Td><span className={`admin-badge status-${item.status}`}>{item.status}</span></Td>
+                      <Td>{item.result_label && (
                         <span className={`admin-badge result-${item.result_label.toLowerCase()}`}>
                           {item.result_label}
-                        </span>
-                      )}
-                    </Td>
-                    <Td>
-                      {item.confidence
-                        ? `${(item.confidence * 100).toFixed(1)}%`
-                        : "-"}
-                    </Td>
-                    <Td>{item.model_type}</Td>
-                    <Td>{item.model_name}</Td>
-                    <Td>{new Date(item.created_at).toLocaleString()}</Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        </span>)}
+                      </Td>
+                      <Td>{item.confidence ? `${(item.confidence * 100).toFixed(1)}%` : "-"}</Td>
+                      <Td>{item.model_type}</Td>
+                      <Td>{item.model_name}</Td>
+                      <Td>{new Date(item.created_at).toLocaleString()}</Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-          {/* PAGINATION */}
-          <div className="admin-pagination">
-            <PageButton onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}>이전</PageButton>
-            {pageNumbers.map((p) => (
-              <PageButton key={p} onClick={() => setCurrentPage(p)} active={p === currentPage}>{p}</PageButton>
-            ))}
-            <PageButton onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}>다음</PageButton>
-          </div>
-        </section>
+            <div className="admin-pagination">
+              <PageButton onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}>이전</PageButton>
+              {pageNumbers.map(p => (
+                <PageButton key={p} onClick={() => setCurrentPage(p)} active={p === currentPage}>{p}</PageButton>
+              ))}
+              <PageButton onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}>다음</PageButton>
+            </div>
+          </section>
+        </div>
 
-        {/* ✅ 상세 패널 */}
-        {detail && (
-          <div
-            style={{
-              position: "fixed",
-              top: 0,
-              right: 0,
-              width: "40%",
-              height: "100%",
-              background: "#fff",
-              borderLeft: "1px solid #ddd",
-              padding: 24,
-              overflowY: "auto",
-              zIndex: 999,
-            }}
-          >
-            <h3>{detail.file_name}</h3>
-
-            <p><b>ID:</b> {detail.id}</p>
-            <p><b>Storage:</b> {detail.storage_key}</p>
-
-            <h4>로그</h4>
-            {detail.logs.map((log) => (
-              <div key={log.id} style={{ marginBottom: 10 }}>
-                <strong>{log.event_type}</strong>
-                <div>{log.message}</div>
-                <small>{new Date(log.created_at).toLocaleString()}</small>
-              </div>
-            ))}
-
-            <button
+        {/* RIGHT PANEL */}
+        {detail && selectedItem && (
+          <div className="admin-panel-wrapper">
+            <button className="admin-panel-close"
               onClick={() => {
                 setSelectedId(null);
                 setDetail(null);
-              }}
-              style={{ marginTop: 20 }}
-            >
-              닫기
-            </button>
+              }}>✕</button>
+
+            <aside className="admin-side-panel">
+              <div className="panel-table">
+                <table>
+                  <tbody>
+                    <tr>
+                      <th>파일명</th>
+                      <td colSpan={5}>{selectedItem.file_name}</td>
+                    </tr>
+
+                    <tr>
+                      <th>상태</th>
+                      <td>
+                        <span className={`admin-badge status-${selectedItem.status}`}>
+                          {selectedItem.status}
+                        </span>
+                      </td>
+                      <th>결과</th>
+                      <td>
+                        {selectedItem.result_label && (
+                          <span className={`admin-badge result-${selectedItem.result_label.toLowerCase()}`}>
+                            {selectedItem.result_label}
+                          </span>
+                        )}
+                      </td>
+                      <th>신뢰도</th>
+                      <td>
+                        {selectedItem.confidence
+                          ? `${(selectedItem.confidence * 100).toFixed(1)}%`
+                          : "-"}
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <th>모델타입</th>
+                      <td colSpan={2}>{selectedItem.model_type}</td>
+                      <th>모델이름</th>
+                      <td colSpan={2}>{selectedItem.model_name}</td>
+                    </tr>
+
+                    <tr>
+                      <th>시간</th>
+                      <td colSpan={5}>
+                        {new Date(selectedItem.created_at).toLocaleString()}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* 미리보기 + 점수 */}
+              <div className="panel-row">
+                <div className="panel-preview"> 원본파일미리보기 </div>
+                  <div className="panel-score">
+                    <div>Real Score</div>
+                    <div>67%</div>
+                    <div>Fake Score</div>
+                    <div>33%</div>
+                    <div>Latency</div>
+                    <div>120ms</div>
+                    <div>XAI Mode</div>
+                    <div>Live</div>
+                  </div>
+                </div>
+                
+                {/* 모달리티 */}
+                <div className="panel-block">
+                  <h4>모달리티별 판단과 퓨징 로직</h4>
+                  <div className="panel-grid-3">
+                    <div>
+                      <b>Vision</b>
+                      <div>Real 60 / Fake 40</div>
+                      <div>Temporal</div>
+                    </div>
+                  <div>
+                  <b>Audio</b>
+                  <div>Real 55 / Fake 45</div>
+                  <div>Frequency</div> </div>
+                  <div>
+                    <b>Text</b>
+                    <div>Real 80 / Fake 20</div>
+                    <div>Structure</div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* XAI + Fusion */}
+              <div className="panel-row">
+                <div className="panel-xai">XAI 시각화</div>
+                <div className="panel-fusion">
+                  <b>SYNC + FUSION BOARD</b>
+                  <div>AVSync 80%</div>
+                  <div>OpenCLIP 72%</div>
+                  <div>Frequency 66%</div>
+                  <div>FLAVA 70%</div>
+                  <div>BLIP+NLI 60%</div>
+                  <div>SceneGraph 68%</div>
+                </div>
+              </div>
+              
+              {/* 타임라인 */}
+              <div className="panel-block">
+                <h4>타임라인</h4>
+                <div className="timeline-box"> Analysis started </div>
+                <div className="timeline-box"> Analysis completed </div>
+              </div>
+              
+              {/* 버튼 */}
+              <div className="panel-actions">
+                <button className="panel-btn">DOWNLOAD</button>
+                <button className="panel-btn outline">RETRY ANALYSIS</button>
+              </div>
+            </aside>
           </div>
         )}
       </main>
@@ -315,11 +339,13 @@ export default function AnalysisList() {
 }
 
 /* UI */
-function FilterField({ label, value, onChange, options, disabled }: any) {
+function FilterField({ label, value, onChange, options }: any) {
   return (
     <div className="admin-filter-field">
       <label className="admin-filter-label">{label}</label>
-      <select className="admin-filter-select" value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}>
+      <select className="admin-filter-select"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}>
         {options.map((o: any) => (
           <option key={o.value} value={o.value}>{o.label}</option>
         ))}
@@ -341,8 +367,7 @@ function PageButton({ children, onClick, active, disabled }: any) {
     <button
       className={`admin-page-button ${active ? "is-active" : ""}`}
       onClick={onClick}
-      disabled={disabled}
-    >
+      disabled={disabled}>
       {children}
     </button>
   );

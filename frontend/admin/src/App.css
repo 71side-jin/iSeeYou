@@ -116,6 +116,7 @@ button {
 .admin-hero {
   display: grid;
   grid-template-columns: minmax(0, 1.12fr) 420px;
+  min-width: 0;
   gap: 24px;
   align-items: stretch;
   padding: 28px;
@@ -424,7 +425,6 @@ button {
   }
 }
 
-/* 🔥 레이아웃 분기 핵심 */
 .admin-page {
   display: block;
 }
@@ -433,22 +433,28 @@ button {
 .admin-page.has-panel {
   display: flex;
   gap: 20px;
+  align-items: flex-start;
 }
 
 /* LEFT */
 .admin-main {
   width: 100%;
+  min-width: 0;
 }
 
-/* 패널 있을 때 60% */
+/* 패널 있을 때 40% */
 .admin-page.has-panel .admin-main {
-  width: 60%;
+  width: 40%;
+}
+.admin-page.has-panel .admin-hero {
+  grid-template-columns: 1fr;
 }
 
 /* RIGHT PANEL */
 .admin-side-panel {
-  width: 40%;
-  min-width: 360px;
+  width: 100%;
+  min-width: unset;
+  overflow: hidden;
 
   border: 1px solid var(--line);
   background: var(--surface);
@@ -456,7 +462,7 @@ button {
   box-shadow: var(--shadow-lg);
   border-radius: var(--radius-xl);
 
-  padding: 24px;
+  padding: 48px 24px 24px 24px;
   height: fit-content;
   position: sticky;
   top: 20px;
@@ -510,4 +516,162 @@ button {
     width: 100%;
     position: relative;
   }
+}
+
+.admin-panel-box {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 16px;
+  background: var(--surface-strong);
+}
+
+.admin-side-panel h3 {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.4rem;
+  margin-bottom: 16px;
+}
+
+.panel-table {
+  width: 100%;
+  border: 1px solid var(--line);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.panel-table table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.panel-table th,
+.panel-table td {
+  border: 1px solid var(--line);
+  padding: 10px;
+  font-size: 13px;
+}
+
+.panel-table th {
+  background: rgba(241, 245, 249, 0.6);
+  text-align: left;
+  font-weight: 700;
+  width: 80px;
+}
+
+.panel-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.panel-preview {
+  flex: 2;
+  height: 180px;
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.panel-score {
+  flex: 1;
+  border: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.panel-score div {
+  padding: 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+.panel-block {
+  border: 1px solid var(--line);
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.panel-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.panel-xai {
+  flex: 1;
+  height: 160px;
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.panel-fusion {
+  flex: 1;
+  border: 1px solid var(--line);
+  padding: 10px;
+}
+
+.timeline-box {
+  border: 1px solid var(--line);
+  padding: 10px;
+  margin-bottom: 6px;
+}
+
+.panel-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.panel-btn {
+  flex: 1;
+  height: 40px;
+  border-radius: 8px;
+  background: black;
+  color: white;
+}
+
+.panel-btn.outline {
+  background: white;
+  color: black;
+  border: 1px solid black;
+}
+
+.admin-panel-wrapper {
+  position: relative;
+  width: 60%;
+  min-width: 0;
+}
+
+/* X 버튼 */
+.admin-panel-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+
+  width: 36px;
+  height: 36px;
+
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+
+  background: white;
+  color: var(--text);
+
+  font-size: 18px;
+  font-weight: 700;
+
+  cursor: pointer;
+  z-index: 10;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-panel-close:hover {
+  background: #f1f5f9;
 }
