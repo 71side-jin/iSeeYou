@@ -13,8 +13,9 @@ class StorageService:
             aws_access_key_id=settings.NCLOUD_ACCESS_KEY,
             aws_secret_access_key=settings.NCLOUD_SECRET_KEY,
             endpoint_url=settings.NCLOUD_ENDPOINT,
-    config=Config(signature_version="s3"),
+            config=Config(signature_version="s3"),
         )
+
         self.bucket = settings.NCLOUD_BUCKET
 
     def save_upload(self, file: UploadFile, dir_name: str) -> tuple[str, int]:
@@ -26,7 +27,6 @@ class StorageService:
         content = file.file.read()
         file_size = len(content)
 
-        # 클라우드 업로드
         self.s3.put_object(
             Bucket=self.bucket,
             Key=storage_key,
@@ -35,3 +35,13 @@ class StorageService:
         )
 
         return storage_key, file_size
+
+    def generate_file_url(self, storage_key: str) -> str:
+        return self.s3.generate_presigned_url(
+            ClientMethod="get_object",
+            Params={
+                "Bucket": self.bucket,
+                "Key": storage_key,
+            },
+            ExpiresIn=60 * 60,
+        )

@@ -675,3 +675,10 @@ button {
 .admin-panel-close:hover {
   background: #f1f5f9;
 }
+
+.panel-preview-media {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 12px;
+}

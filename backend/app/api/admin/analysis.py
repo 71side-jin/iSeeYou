@@ -15,6 +15,8 @@ from app.schemas.analysis import (
 )
 from app.repositories.analysis_repository import AnalysisRepository
 
+from app.services.storage_service import StorageService
+
 router = APIRouter(prefix="/analysis", tags=["admin-analysis"])
 
 
@@ -52,5 +54,13 @@ def get_analysis_detail(
 
     if not analysis:
         raise HTTPException(status_code=404, detail="Analysis not found")
+
+    storage_service = StorageService()
+
+    file_url = storage_service.generate_file_url(
+        analysis.storage_key
+    )
+
+    analysis.file_url = file_url
 
     return analysis

@@ -23,6 +23,12 @@ type AnalysisDetail = {
   id: string;
   file_name: string;
   storage_key: string;
+  file_url?: string;
+
+  result_label: string | null;
+  confidence: number | null;
+  inference_time_ms: number | null;
+
   logs: {
     id: number;
     event_type: string;
@@ -54,26 +60,65 @@ export default function AnalysisList() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
-  // 🔥 핵심: 선택된 아이템 찾기
   const selectedItem = useMemo(() => {
     return data.find((d) => d.id === selectedId);
   }, [data, selectedId]);
 
+  const realScore = useMemo(() => {
+    if (!detail || detail.confidence == null) return "-";
+
+    const value =
+      detail.result_label === "REAL"
+        ? detail.confidence * 100
+        : (1 - detail.confidence) * 100;
+
+    return `${value.toFixed(1)}%`;
+  }, [detail]);
+
+  const fakeScore = useMemo(() => {
+    if (!detail || detail.confidence == null) return "-";
+
+    const value =
+      detail.result_label === "FAKE"
+        ? detail.confidence * 100
+        : (1 - detail.confidence) * 100;
+
+    return `${value.toFixed(1)}%`;
+  }, [detail]);
+
   useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, resultFilter, modelTypeFilter, modelNameFilter, sortOrder]);
+  }, [
+    statusFilter,
+    resultFilter,
+    modelTypeFilter,
+    modelNameFilter,
+    sortOrder,
+  ]);
 
   // 목록 fetch
   useEffect(() => {
     const params = new URLSearchParams();
+
     params.set("page", String(currentPage));
     params.set("limit", String(itemsPerPage));
     params.set("sort_order", sortOrder);
 
-    if (statusFilter !== "all") params.set("status", statusFilter);
-    if (resultFilter !== "all") params.set("result_label", resultFilter);
-    if (modelTypeFilter !== "all") params.set("model_type", modelTypeFilter);
-    if (modelNameFilter !== "all") params.set("model_name", modelNameFilter);
+    if (statusFilter !== "all") {
+      params.set("status", statusFilter);
+    }
+
+    if (resultFilter !== "all") {
+      params.set("result_label", resultFilter);
+    }
+
+    if (modelTypeFilter !== "all") {
+      params.set("model_type", modelTypeFilter);
+    }
+
+    if (modelNameFilter !== "all") {
+      params.set("model_name", modelNameFilter);
+    }
 
     setLoading(true);
 
@@ -85,9 +130,16 @@ export default function AnalysisList() {
         setTotalCount(res.total);
         setLoading(false);
       });
-  }, [currentPage, statusFilter, resultFilter, modelTypeFilter, modelNameFilter, sortOrder]);
+  }, [
+    currentPage,
+    statusFilter,
+    resultFilter,
+    modelTypeFilter,
+    modelNameFilter,
+    sortOrder,
+  ]);
 
-  // detail fetch (logs용)
+  // detail fetch
   useEffect(() => {
     if (!selectedId) return;
 
@@ -110,7 +162,10 @@ export default function AnalysisList() {
       start = Math.max(1, end - max + 1);
     }
 
-    for (let i = start; i <= end; i++) pages.push(i);
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+
     return pages;
   }, [currentPage, totalPages]);
 
@@ -118,7 +173,9 @@ export default function AnalysisList() {
     return (
       <div className="admin-shell">
         <main className="admin-page">
-          <section className="admin-loading-panel">Loading...</section>
+          <section className="admin-loading-panel">
+            Loading...
+          </section>
         </main>
       </div>
     );
@@ -132,17 +189,21 @@ export default function AnalysisList() {
         <div className="admin-main">
 
           <section className="admin-hero">
-            <div className="admin-hero-copy">분석 결과 목록</div>
+            <div className="admin-hero-copy">
+              분석 결과 목록
+            </div>
 
             <div className="admin-hero-stats">
               <div className="admin-stat-card">
                 <span>전체 결과</span>
                 <strong>{totalCount}</strong>
               </div>
+
               <div className="admin-stat-card">
                 <span>현재 페이지</span>
                 <strong>{currentPage}</strong>
               </div>
+
               <div className="admin-stat-card">
                 <span>총 페이지</span>
                 <strong>{totalPages}</strong>
@@ -151,21 +212,63 @@ export default function AnalysisList() {
           </section>
 
           <section className="admin-filter-panel">
-            <FilterField label="상태" value={statusFilter} onChange={setStatusFilter}
-              options={[{ value: "all", label: "전체" }, ...STATUS_OPTIONS.map(s => ({ value: s, label: s }))]} />
-            <FilterField label="결과" value={resultFilter} onChange={setResultFilter}
-              options={[{ value: "all", label: "전체" }, ...RESULT_OPTIONS.map(r => ({ value: r, label: r }))]} />
-            <FilterField label="모델 타입" value={modelTypeFilter} onChange={setModelTypeFilter}
-              options={[{ value: "all", label: "전체" }, ...MODEL_TYPE_OPTIONS.map(t => ({ value: t, label: t }))]} />
-            <FilterField label="시간 정렬" value={sortOrder}
+            <FilterField
+              label="상태"
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={[
+                { value: "all", label: "전체" },
+                ...STATUS_OPTIONS.map((s) => ({
+                  value: s,
+                  label: s,
+                })),
+              ]}
+            />
+
+            <FilterField
+              label="결과"
+              value={resultFilter}
+              onChange={setResultFilter}
+              options={[
+                { value: "all", label: "전체" },
+                ...RESULT_OPTIONS.map((r) => ({
+                  value: r,
+                  label: r,
+                })),
+              ]}
+            />
+
+            <FilterField
+              label="모델 타입"
+              value={modelTypeFilter}
+              onChange={setModelTypeFilter}
+              options={[
+                { value: "all", label: "전체" },
+                ...MODEL_TYPE_OPTIONS.map((t) => ({
+                  value: t,
+                  label: t,
+                })),
+              ]}
+            />
+
+            <FilterField
+              label="시간 정렬"
+              value={sortOrder}
               onChange={(v) => setSortOrder(v as "asc" | "desc")}
-              options={[{ value: "desc", label: "최신순" }, { value: "asc", label: "오래된순" }]} />
+              options={[
+                { value: "desc", label: "최신순" },
+                { value: "asc", label: "오래된순" },
+              ]}
+            />
           </section>
 
-          <div className="admin-total-row">총 {totalCount}개</div>
+          <div className="admin-total-row">
+            총 {totalCount}개
+          </div>
 
           <section className="admin-table-panel">
             <div className="admin-table-scroll">
+
               <table className="admin-table">
                 <thead>
                   <tr>
@@ -181,19 +284,44 @@ export default function AnalysisList() {
 
                 <tbody>
                   {data.map((item) => (
-                    <tr key={item.id} className="admin-row"
-                        onClick={() => setSelectedId(item.id)}>
-                      <Td className="is-file">{item.file_name}</Td>
-                      <Td><span className={`admin-badge status-${item.status}`}>{item.status}</span></Td>
-                      <Td>{item.result_label && (
-                        <span className={`admin-badge result-${item.result_label.toLowerCase()}`}>
-                          {item.result_label}
-                        </span>)}
+                    <tr
+                      key={item.id}
+                      className="admin-row"
+                      onClick={() => setSelectedId(item.id)}
+                    >
+                      <Td className="is-file">
+                        {item.file_name}
                       </Td>
-                      <Td>{item.confidence ? `${(item.confidence * 100).toFixed(1)}%` : "-"}</Td>
+
+                      <Td>
+                        <span className={`admin-badge status-${item.status}`}>
+                          {item.status}
+                        </span>
+                      </Td>
+
+                      <Td>
+                        {item.result_label && (
+                          <span
+                            className={`admin-badge result-${item.result_label.toLowerCase()}`}
+                          >
+                            {item.result_label}
+                          </span>
+                        )}
+                      </Td>
+
+                      <Td>
+                        {item.confidence != null
+                          ? `${(item.confidence * 100).toFixed(1)}%`
+                          : "-"}
+                      </Td>
+
                       <Td>{item.model_type}</Td>
+
                       <Td>{item.model_name}</Td>
-                      <Td>{new Date(item.created_at).toLocaleString()}</Td>
+
+                      <Td>
+                        {new Date(item.created_at).toLocaleString()}
+                      </Td>
                     </tr>
                   ))}
                 </tbody>
@@ -201,11 +329,33 @@ export default function AnalysisList() {
             </div>
 
             <div className="admin-pagination">
-              <PageButton onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}>이전</PageButton>
-              {pageNumbers.map(p => (
-                <PageButton key={p} onClick={() => setCurrentPage(p)} active={p === currentPage}>{p}</PageButton>
+              <PageButton
+                onClick={() =>
+                  setCurrentPage((p) => Math.max(p - 1, 1))
+                }
+                disabled={currentPage === 1}
+              >
+                이전
+              </PageButton>
+
+              {pageNumbers.map((p) => (
+                <PageButton
+                  key={p}
+                  onClick={() => setCurrentPage(p)}
+                  active={p === currentPage}
+                >
+                  {p}
+                </PageButton>
               ))}
-              <PageButton onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}>다음</PageButton>
+
+              <PageButton
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(p + 1, totalPages))
+                }
+                disabled={currentPage === totalPages}
+              >
+                다음
+              </PageButton>
             </div>
           </section>
         </div>
@@ -213,39 +363,57 @@ export default function AnalysisList() {
         {/* RIGHT PANEL */}
         {detail && selectedItem && (
           <div className="admin-panel-wrapper">
-            <button className="admin-panel-close"
+
+            <button
+              className="admin-panel-close"
               onClick={() => {
                 setSelectedId(null);
                 setDetail(null);
-              }}>✕</button>
+              }}
+            >
+              ✕
+            </button>
 
             <aside className="admin-side-panel">
+
               <div className="panel-table">
                 <table>
                   <tbody>
+
                     <tr>
                       <th>파일명</th>
-                      <td colSpan={5}>{selectedItem.file_name}</td>
+                      <td colSpan={5}>
+                        {selectedItem.file_name}
+                      </td>
                     </tr>
 
                     <tr>
                       <th>상태</th>
+
                       <td>
-                        <span className={`admin-badge status-${selectedItem.status}`}>
+                        <span
+                          className={`admin-badge status-${selectedItem.status}`}
+                        >
                           {selectedItem.status}
                         </span>
                       </td>
+
                       <th>결과</th>
+
                       <td>
                         {selectedItem.result_label && (
-                          <span className={`admin-badge result-${selectedItem.result_label.toLowerCase()}`}>
+                          <span
+                            className={`admin-badge result-${selectedItem.result_label.toLowerCase()}`}
+                          >
                             {selectedItem.result_label}
                           </span>
                         )}
                       </td>
+
                       <th>신뢰도</th>
+
                       <td>
-                        {selectedItem.confidence
+                        {selectedItem.confidence != null
                           ? `${(selectedItem.confidence * 100).toFixed(1)}%`
                           : "-"}
                       </td>
@@ -253,62 +421,121 @@ export default function AnalysisList() {
 
                     <tr>
                       <th>모델타입</th>
-                      <td colSpan={2}>{selectedItem.model_type}</td>
+
+                      <td colSpan={2}>
+                        {selectedItem.model_type}
+                      </td>
+
                       <th>모델이름</th>
-                      <td colSpan={2}>{selectedItem.model_name}</td>
+
+                      <td colSpan={2}>
+                        {selectedItem.model_name}
+                      </td>
                     </tr>
 
                     <tr>
                       <th>시간</th>
+
                       <td colSpan={5}>
-                        {new Date(selectedItem.created_at).toLocaleString()}
+                        {new Date(
+                          selectedItem.created_at
+                        ).toLocaleString()}
                       </td>
                     </tr>
+
                   </tbody>
                 </table>
               </div>
-              
+
               {/* 미리보기 + 점수 */}
               <div className="panel-row">
-                <div className="panel-preview"> 원본파일미리보기 </div>
-                  <div className="panel-score">
-                    <div>Real Score</div>
-                    <div>67%</div>
-                    <div>Fake Score</div>
-                    <div>33%</div>
-                    <div>Latency</div>
-                    <div>120ms</div>
-                    <div>XAI Mode</div>
-                    <div>Live</div>
-                  </div>
+
+                <div className="panel-preview">
+                  {detail.file_url ? (
+                    selectedItem.model_type === "image" ? (
+                      <img
+                        src={detail.file_url}
+                        alt={selectedItem.file_name}
+                        className="panel-preview-media"
+                      />
+                    ) : selectedItem.model_type === "video" ? (
+                      <video
+                        src={detail.file_url}
+                        controls
+                        className="panel-preview-media"
+                      />
+                    ) : (
+                      <a
+                        href={detail.file_url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        파일 다운로드
+                      </a>
+                    )
+                  ) : (
+                    "미리보기 없음"
+                  )}
                 </div>
-                
-                {/* 모달리티 */}
-                <div className="panel-block">
-                  <h4>모달리티별 판단과 퓨징 로직</h4>
-                  <div className="panel-grid-3">
-                    <div>
-                      <b>Vision</b>
-                      <div>Real 60 / Fake 40</div>
-                      <div>Temporal</div>
-                    </div>
+
+                <div className="panel-score">
+
+                  <div>Real Score</div>
+                  <div>{realScore}</div>
+
+                  <div>Fake Score</div>
+                  <div>{fakeScore}</div>
+
+                  <div>Latency</div>
                   <div>
-                  <b>Audio</b>
-                  <div>Real 55 / Fake 45</div>
-                  <div>Frequency</div> </div>
+                    {detail.inference_time_ms != null
+                      ? `${detail.inference_time_ms}ms`
+                      : "-"}
+                  </div>
+
+                  <div>XAI Mode</div>
+                  <div>Live</div>
+
+                </div>
+              </div>
+
+              {/* 모달리티 */}
+              <div className="panel-block">
+                <h4>모달리티별 판단과 퓨징 로직</h4>
+
+                <div className="panel-grid-3">
+
+                  <div>
+                    <b>Vision</b>
+                    <div>Real 60 / Fake 40</div>
+                    <div>Temporal</div>
+                  </div>
+
+                  <div>
+                    <b>Audio</b>
+                    <div>Real 55 / Fake 45</div>
+                    <div>Frequency</div>
+                  </div>
+
                   <div>
                     <b>Text</b>
                     <div>Real 80 / Fake 20</div>
                     <div>Structure</div>
                   </div>
+
                 </div>
               </div>
-              
+
               {/* XAI + Fusion */}
               <div className="panel-row">
-                <div className="panel-xai">XAI 시각화</div>
+
+                <div className="panel-xai">
+                  XAI 시각화
+                </div>
+
                 <div className="panel-fusion">
                   <b>SYNC + FUSION BOARD</b>
+
                   <div>AVSync 80%</div>
                   <div>OpenCLIP 72%</div>
                   <div>Frequency 66%</div>
@@ -317,18 +544,33 @@ export default function AnalysisList() {
                   <div>SceneGraph 68%</div>
                 </div>
               </div>
-              
+
               {/* 타임라인 */}
               <div className="panel-block">
+
                 <h4>타임라인</h4>
-                <div className="timeline-box"> Analysis started </div>
-                <div className="timeline-box"> Analysis completed </div>
+
+                <div className="timeline-box">
+                  Analysis started
+                </div>
+
+                <div className="timeline-box">
+                  Analysis completed
+                </div>
+
               </div>
-              
+
               {/* 버튼 */}
               <div className="panel-actions">
-                <button className="panel-btn">DOWNLOAD</button>
-                <button className="panel-btn outline">RETRY ANALYSIS</button>
+
+                <button className="panel-btn">
+                  DOWNLOAD
+                </button>
+
+                <button className="panel-btn outline">
+                  RETRY ANALYSIS
+                </button>
+
               </div>
             </aside>
           </div>
@@ -339,15 +581,28 @@ export default function AnalysisList() {
 }
 
 /* UI */
-function FilterField({ label, value, onChange, options }: any) {
+function FilterField({
+  label,
+  value,
+  onChange,
+  options,
+}: any) {
   return (
     <div className="admin-filter-field">
-      <label className="admin-filter-label">{label}</label>
-      <select className="admin-filter-select"
+
+      <label className="admin-filter-label">
+        {label}
+      </label>
+
+      <select
+        className="admin-filter-select"
         value={value}
-        onChange={(e) => onChange(e.target.value)}>
+        onChange={(e) => onChange(e.target.value)}
+      >
         {options.map((o: any) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
         ))}
       </select>
     </div>
@@ -358,16 +613,29 @@ function Th({ children }: any) {
   return <th className="admin-th">{children}</th>;
 }
 
-function Td({ children, className = "" }: any) {
-  return <td className={`admin-td ${className}`}>{children}</td>;
+function Td({
+  children,
+  className = "",
+}: any) {
+  return (
+    <td className={`admin-td ${className}`}>
+      {children}
+    </td>
+  );
 }
 
-function PageButton({ children, onClick, active, disabled }: any) {
+function PageButton({
+  children,
+  onClick,
+  active,
+  disabled,
+}: any) {
   return (
     <button
       className={`admin-page-button ${active ? "is-active" : ""}`}
       onClick={onClick}
-      disabled={disabled}>
+      disabled={disabled}
+    >
       {children}
     </button>
   );
