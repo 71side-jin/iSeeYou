@@ -17,6 +17,8 @@ from app.repositories.analysis_repository import AnalysisRepository
 
 from app.services.storage_service import StorageService
 
+from fastapi.responses import StreamingResponse
+
 router = APIRouter(prefix="/analysis", tags=["admin-analysis"])
 
 
@@ -50,17 +52,45 @@ def get_analysis_detail(
     db: Session = Depends(get_db),
 ):
     repo = AnalysisRepository()
+
     analysis = repo.get_by_id(db, analysis_id)
 
     if not analysis:
-        raise HTTPException(status_code=404, detail="Analysis not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Analysis not found",
+        )
+
+    return analysis
+
+
+@router.get("/{analysis_id}/preview")
+def preview_analysis_file(
+    analysis_id: UUID,
+    db: Session = Depends(get_db),
+):
+    repo = AnalysisRepository()
+
+    analysis = repo.get_by_id(db, analysis_id)
+
+    if not analysis:
+        raise HTTPException(
+            status_code=404,
+            detail="Analysis not found",
+        )
 
     storage_service = StorageService()
 
-    file_url = storage_service.generate_file_url(
+    file_data = storage_service.get_file_stream(
         analysis.storage_key
     )
 
-    analysis.file_url = file_url
+    return StreamingResponse(
+        file_data["body"],
+        media_type=file_data["content_type"],
+        headers={
+            "Content-Disposition":
+                f'inline; filename="{analysis.file_name}"'
+        },
+    )
 
-    return analysis

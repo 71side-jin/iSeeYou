@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi import UploadFile
 from app.core.config import settings
 from botocore.client import Config
-
+from io import BytesIO
 
 class StorageService:
     def __init__(self):
@@ -35,13 +35,19 @@ class StorageService:
         )
 
         return storage_key, file_size
-
-    def generate_file_url(self, storage_key: str) -> str:
-        return self.s3.generate_presigned_url(
-            ClientMethod="get_object",
-            Params={
-                "Bucket": self.bucket,
-                "Key": storage_key,
-            },
-            ExpiresIn=60 * 60,
+    
+    def get_file_stream(self, storage_key: str):
+        obj = self.s3.get_object(
+            Bucket=self.bucket,
+            Key=storage_key,
         )
+
+        return {
+            "body": obj["Body"],
+            "content_type": obj.get(
+                "ContentType",
+                "application/octet-stream",
+            ),
+        }
+    
+    
