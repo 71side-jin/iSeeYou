@@ -33,11 +33,12 @@
 html,
 body,
 #root {
-  min-height: 100%;
+  height: 100%;
 }
 
 body {
   margin: 0;
+  overflow: hidden;
   color: var(--text);
   background:
     radial-gradient(circle at 14% 10%, rgba(255, 123, 84, 0.08), transparent 28%),
@@ -58,7 +59,7 @@ button {
 }
 
 .admin-shell {
-  min-height: 100vh;
+  height: 100vh;
   position: relative;
   overflow: hidden;
 }
@@ -92,7 +93,8 @@ button {
 .admin-page {
   width: min(var(--content-width), calc(100% - 40px));
   margin: 0 auto;
-  padding: 40px 0 88px;
+  padding: 24px 0;
+  height: 100vh;
 }
 
 .admin-loading-panel,
@@ -126,22 +128,11 @@ button {
     linear-gradient(180deg, rgba(255,255,255,0.82), rgba(255,255,255,0.7)),
     var(--surface);
 }
-/*
-.admin-hero-copy {
-  align-content: center;
-  margin: 0;
-  font-family: 'Syne', sans-serif;
-  font-size: clamp(2.7rem, 4.8vw, 4.6rem);
-  font-weight: 500;
-  line-height: 0.92;
-  letter-spacing: -0.07em;
-  word-break: keep-all;
-}
-*/
+
 .admin-hero-copy {
   align-content: center;
   font-family: 'Syne', sans-serif;
-  font-size: clamp(2.0rem, 4.8vw, 3.0rem);
+  font-size: clamp(2rem, 4.8vw, 3rem);
   font-weight: 500;
   line-height: 0.92;
   letter-spacing: -0.07em;
@@ -292,12 +283,6 @@ button {
   background: rgba(255, 123, 84, 0.04);
 }
 
-.admin-empty-cell {
-  text-align: center;
-  padding: 36px 16px;
-  color: var(--text-soft);
-}
-
 .admin-badge {
   display: inline-flex;
   align-items: center;
@@ -388,73 +373,48 @@ button {
   box-shadow: none;
 }
 
-@media (max-width: 1120px) {
-  .admin-hero {
-    grid-template-columns: 1fr;
-  }
-
-  .admin-filter-panel {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 780px) {
-  .admin-page {
-    width: min(var(--content-width), calc(100% - 24px));
-    padding: 24px 0 56px;
-  }
-
-  .admin-hero,
-  .admin-filter-panel,
-  .admin-table-panel,
-  .admin-loading-panel {
-    border-radius: 24px;
-  }
-
-  .admin-hero {
-    padding: 22px;
-  }
-
-  .admin-hero-stats,
-  .admin-filter-panel {
-    grid-template-columns: 1fr;
-  }
-
-  .admin-hero h1 {
-    font-size: clamp(2.3rem, 11vw, 3.6rem);
-  }
-}
+/* ===== 핵심 레이아웃 ===== */
 
 .admin-page {
   display: block;
 }
 
-/* 패널 있을 때만 flex */
 .admin-page.has-panel {
   display: flex;
   gap: 20px;
-  align-items: flex-start;
+  align-items: stretch;
+  overflow: hidden;
 }
 
-/* LEFT */
 .admin-main {
   width: 100%;
   min-width: 0;
 }
 
-/* 패널 있을 때 40% */
 .admin-page.has-panel .admin-main {
   width: 40%;
+  height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding-right: 4px;
 }
+
 .admin-page.has-panel .admin-hero {
   grid-template-columns: 1fr;
 }
 
-/* RIGHT PANEL */
+.admin-panel-wrapper {
+  position: relative;
+  width: 60%;
+  min-width: 0;
+  height: calc(100vh - 48px);
+}
+
 .admin-side-panel {
   width: 100%;
-  min-width: unset;
-  overflow: hidden;
+  height: 100%;
+
+  overflow-y: auto;
+  overflow-x: hidden;
 
   border: 1px solid var(--line);
   background: var(--surface);
@@ -462,75 +422,33 @@ button {
   box-shadow: var(--shadow-lg);
   border-radius: var(--radius-xl);
 
-  padding: 48px 24px 24px 24px;
-  height: fit-content;
-  position: sticky;
-  top: 20px;
+  padding: 48px 24px 24px;
 }
 
-/* 탭 */
-.admin-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
+/* 스크롤바 */
+
+.admin-main::-webkit-scrollbar,
+.admin-side-panel::-webkit-scrollbar {
+  width: 10px;
 }
 
-.admin-tabs button {
-  padding: 8px 14px;
+.admin-main::-webkit-scrollbar-track,
+.admin-side-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-main::-webkit-scrollbar-thumb,
+.admin-side-panel::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.12);
   border-radius: 999px;
-  background: #eee;
-  cursor: pointer;
 }
 
-/* 이미지 */
-.admin-preview-img {
-  width: 100%;
-  border-radius: var(--radius-md);
+.admin-main::-webkit-scrollbar-thumb:hover,
+.admin-side-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.2);
 }
 
-/* 로그 */
-.admin-log-item {
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  margin-bottom: 10px;
-}
-
-/* 닫기 버튼 */
-.admin-close-btn {
-  margin-top: 16px;
-  width: 100%;
-  height: 42px;
-  border-radius: var(--radius-sm);
-  background: #111;
-  color: white;
-}
-
-/* 반응형 */
-@media (max-width: 1100px) {
-  .admin-page.has-panel {
-    flex-direction: column;
-  }
-
-  .admin-side-panel {
-    width: 100%;
-    position: relative;
-  }
-}
-
-.admin-panel-box {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  padding: 16px;
-  margin-bottom: 16px;
-  background: var(--surface-strong);
-}
-
-.admin-side-panel h3 {
-  font-family: 'Syne', sans-serif;
-  font-size: 1.4rem;
-  margin-bottom: 16px;
-}
+/* 패널 */
 
 .panel-table {
   width: 100%;
@@ -568,11 +486,16 @@ button {
 
 .panel-preview {
   flex: 2;
-  height: 180px;
+  min-width: 0;
+  height: 260px;
+
   border: 1px solid var(--line);
+
   display: flex;
   align-items: center;
   justify-content: center;
+
+  overflow: hidden;
 }
 
 .panel-score {
@@ -583,70 +506,10 @@ button {
 }
 
 .panel-score div {
-  padding: 6px;
+  padding: 10px;
   border-bottom: 1px solid var(--line);
 }
 
-.panel-block {
-  border: 1px solid var(--line);
-  padding: 12px;
-  margin-bottom: 16px;
-}
-
-.panel-grid-3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.panel-xai {
-  flex: 1;
-  height: 160px;
-  border: 1px solid var(--line);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.panel-fusion {
-  flex: 1;
-  border: 1px solid var(--line);
-  padding: 10px;
-}
-
-.timeline-box {
-  border: 1px solid var(--line);
-  padding: 10px;
-  margin-bottom: 6px;
-}
-
-.panel-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.panel-btn {
-  flex: 1;
-  height: 40px;
-  border-radius: 8px;
-  background: black;
-  color: white;
-}
-
-.panel-btn.outline {
-  background: white;
-  color: black;
-  border: 1px solid black;
-}
-
-.admin-panel-wrapper {
-  position: relative;
-  width: 60%;
-  min-width: 0;
-}
-
-/* X 버튼 */
 .admin-panel-close {
   position: absolute;
   top: 10px;
@@ -683,27 +546,6 @@ button {
   border-radius: 12px;
 }
 
-.text-preview {
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-
-  padding: 20px;
-
-  border-radius: 18px;
-  background: #f7f7f7;
-}
-
-.text-preview pre {
-  margin: 0;
-
-  white-space: pre-wrap;
-  word-break: break-word;
-
-  font-size: 14px;
-  line-height: 1.6;
-}
-
 .preview-empty {
   display: flex;
   align-items: center;
@@ -715,10 +557,76 @@ button {
   color: #777;
 }
 
-.panel-preview-media {
+.panel-preview-text-frame {
   width: 100%;
   height: 100%;
+  border: 0;
+  background: white;
+}
 
-  object-fit: contain;
-  border-radius: 18px;
+/* ===== 반응형 ===== */
+
+@media (max-width: 1120px) {
+  body {
+    overflow: auto;
+  }
+
+  .admin-shell {
+    height: auto;
+    overflow: visible;
+  }
+
+  .admin-page {
+    height: auto;
+  }
+
+  .admin-page.has-panel {
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .admin-main,
+  .admin-panel-wrapper,
+  .admin-page.has-panel .admin-main {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .admin-side-panel {
+    height: auto;
+    overflow: visible;
+  }
+
+  .admin-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-filter-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 780px) {
+  .admin-page {
+    width: min(var(--content-width), calc(100% - 24px));
+    padding: 16px 0 40px;
+  }
+
+  .admin-hero,
+  .admin-filter-panel,
+  .admin-table-panel,
+  .admin-loading-panel,
+  .admin-side-panel {
+    border-radius: 24px;
+  }
+
+  .admin-hero {
+    padding: 22px;
+  }
+
+  .admin-hero-stats,
+  .admin-filter-panel {
+    grid-template-columns: 1fr;
+  }
 }
