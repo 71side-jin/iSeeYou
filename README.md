@@ -12,6 +12,9 @@ Servers → PostgreSQL → Databases → 우클릭 → Create → Database
  1.3.2. []로 감싸진 부분을 수정해줍니다.
 
 ## 1.4 가상환경 세팅 (Windows)
+가상환경명 isyVenv로 통일 권장\
+isyVenv가 아닌 다른 이름 쓸 경우 .gitignore의 .env 윗줄에 [가상환경명]/ 추가해주세요.\
+\
 backend에서:\
 python -m venv [가상환경명]\
 [가상환경명]\Scripts\activate <-가상환경 키는 명령어\
