@@ -19,6 +19,9 @@ from app.services.storage_service import StorageService
 
 from fastapi.responses import StreamingResponse
 
+from app.api.admin.auth import get_current_admin
+from app.models.admin_user import AdminUser
+
 router = APIRouter(prefix="/analysis", tags=["admin-analysis"])
 
 
@@ -32,6 +35,7 @@ def get_analysis_list(
     model_name: str | None = Query(None),
     sort_order: Literal["asc", "desc"] = Query("desc"),
     db: Session = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin),
 ):
     repo = AnalysisRepository()
     return repo.list_paginated(
@@ -50,6 +54,7 @@ def get_analysis_list(
 def get_analysis_detail(
     analysis_id: UUID,
     db: Session = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin),
 ):
     repo = AnalysisRepository()
 
@@ -68,6 +73,7 @@ def get_analysis_detail(
 def preview_analysis_file(
     analysis_id: UUID,
     db: Session = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin),
 ):
     repo = AnalysisRepository()
 

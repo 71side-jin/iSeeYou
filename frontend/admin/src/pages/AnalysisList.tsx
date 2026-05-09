@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import "../css/AnalysisList.css";
 
 const API_BASE = "http://localhost:8000/api/admin/analysis";
 
@@ -93,6 +94,9 @@ export default function AnalysisList() {
   const [selectedId, setSelectedId] =
     useState<string | null>(null);
 
+  const [selectedItem, setSelectedItem] =
+    useState<Analysis | null>(null);
+
   const [detail, setDetail] =
     useState<AnalysisDetail | null>(null);
 
@@ -123,21 +127,15 @@ export default function AnalysisList() {
     useState(0);
 
   const [textContent, setTextContent] =
-  useState<string>("");
+    useState<string>("");
 
-  const selectedItem = useMemo(() => {
-    return data.find((d) => d.id === selectedId);
-  }, [data, selectedId]);
-
-  const previewUrl = selectedId
-  ? `${API_BASE}/${selectedId}/preview`
-  : "";
+  const [previewBlobUrl, setPreviewBlobUrl] =
+    useState<string>("");
 
   const modelNameOptions = useMemo(() => {
     if (modelTypeFilter === "all") {
       return [];
     }
-
     return MODEL_NAME_MAP[modelTypeFilter] ?? [];
   }, [modelTypeFilter]);
 
@@ -166,6 +164,10 @@ export default function AnalysisList() {
 
     return `${value.toFixed(1)}%`;
   }, [detail]);
+
+  const token = localStorage.getItem(
+    "admin_access_token"
+  );
 
   useEffect(() => {
     if (modelTypeFilter === "all") {
@@ -217,8 +219,23 @@ export default function AnalysisList() {
 
     setLoading(true);
 
-    fetch(`${API_BASE}?${params}`)
-      .then((res) => res.json())
+    fetch(`${API_BASE}?${params}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }).then((res) => {
+        if (res.status === 401) {
+          localStorage.removeItem(
+            "admin_access_token"
+          );
+
+          window.location.reload();
+
+          throw new Error("Unauthorized");
+        }
+
+        return res.json();
+      })
       .then((res: AnalysisListResponse) => {
         setData(res.items);
         setTotalPages(res.total_pages);
@@ -238,12 +255,66 @@ export default function AnalysisList() {
   useEffect(() => {
     if (!selectedId) return;
 
-    fetch(`${API_BASE}/${selectedId}`)
-      .then((res) => res.json())
+    fetch(`${API_BASE}/${selectedId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }).then((res) => res.json())
       .then((res: AnalysisDetail) => {
         setDetail(res);
       });
   }, [selectedId]);
+
+  // preview fetch
+  useEffect(() => {
+    if (!selectedId || !selectedItem) {
+      return;
+    }
+
+    let objectUrl = "";
+
+    fetch(`${API_BASE}/${selectedId}/preview`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(async (res) => {
+        if (res.status === 401) {
+          localStorage.removeItem(
+            "admin_access_token"
+          );
+
+          window.location.reload();
+
+          throw new Error("Unauthorized");
+        }
+
+        if (
+          selectedItem.model_type === "text"
+        ) {
+          const text = await res.text();
+
+          setTextContent(text);
+
+          return null;
+        }
+
+        const blob = await res.blob();
+
+        objectUrl =
+          URL.createObjectURL(blob);
+
+        setPreviewBlobUrl(objectUrl);
+
+        return null;
+      });
+
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [selectedId, selectedItem]);
 
   const pageNumbers = useMemo(() => {
     const pages: number[] = [];
@@ -409,9 +480,10 @@ export default function AnalysisList() {
                     <tr
                       key={item.id}
                       className="admin-row"
-                      onClick={() =>
-                        setSelectedId(item.id)
-                      }
+                      onClick={() => {
+                        setSelectedId(item.id);
+                        setSelectedItem(item);
+                      }}
                     >
                       <Td className="is-file">
                         {item.file_name}
@@ -505,7 +577,10 @@ export default function AnalysisList() {
               className="admin-panel-close"
               onClick={() => {
                 setSelectedId(null);
+                setSelectedItem(null);
                 setDetail(null);
+                setPreviewBlobUrl("");
+                setTextContent("");
               }}
             >
               ✕
@@ -600,7 +675,7 @@ export default function AnalysisList() {
 
                   {selectedItem?.model_type === "image" && (
                     <img
-                      src={previewUrl}
+                      src={previewBlobUrl}
                       alt={selectedItem.file_name}
                       className="panel-preview-media"
                     />
@@ -609,18 +684,16 @@ export default function AnalysisList() {
                   {(selectedItem?.model_type === "video" ||
                     selectedItem?.model_type === "multimodal") && (
                     <video
-                      src={previewUrl}
+                      src={previewBlobUrl}
                       controls
                       className="panel-preview-media"
                     />
                   )}
 
                   {selectedItem?.model_type === "text" && (
-                    <iframe
-                      src={previewUrl}
-                      className="panel-preview-text-frame"
-                      title="text-preview"
-                    />
+                    <pre className="panel-text-preview">
+                      {textContent}
+                    </pre>
                   )}
 
                 </div>

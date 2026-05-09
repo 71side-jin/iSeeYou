@@ -4,11 +4,17 @@ from sqlalchemy import func
 from app.core.database import get_db
 from app.models.analysis import Analysis
 
+from app.api.admin.auth import get_current_admin
+from app.models.admin_user import AdminUser
+
 router = APIRouter(prefix="/stats", tags=["admin-stats"])
 
 
 @router.get("/summary")
-def get_summary(db: Session = Depends(get_db)):
+def get_summary(
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(get_current_admin),
+):
     total = db.query(func.count(Analysis.id)).scalar()
     success = db.query(func.count()).filter(Analysis.status == "success").scalar()
     failed = db.query(func.count()).filter(Analysis.status == "failed").scalar()
