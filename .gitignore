@@ -5,8 +5,15 @@ __pycache__/
 *.pyd
 
 # Virtual env
-venv/
+isyVenv/
 .env
+
+# Python tooling
+.python-version
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
 
 # FastAPI
 *.log
@@ -25,6 +32,8 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+*.tmp
+*.swp
 
 # IDE
 .vscode/

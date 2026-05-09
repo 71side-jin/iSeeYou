@@ -22,3 +22,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+from app.api.admin.auth import router as admin_auth_router
+
+app.include_router(admin_auth_router, prefix="/api/admin")
