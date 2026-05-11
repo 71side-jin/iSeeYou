@@ -9,7 +9,7 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("admin_access_token");
+    const token = sessionStorage.getItem("admin_access_token");
 
     setIsAuthenticated(!!token);
   }, []);
@@ -26,5 +26,17 @@ export default function App() {
     );
   }
 
-  return <AnalysisList />;
+  function handleLogout() {
+    sessionStorage.removeItem(
+      "admin_access_token"
+    );
+
+    setIsAuthenticated(false);
+  }
+
+  return (
+    <AnalysisList
+      onLogout={handleLogout}
+    />
+  );
 }

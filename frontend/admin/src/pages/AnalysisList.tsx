@@ -87,7 +87,13 @@ const MODEL_NAME_MAP: Record<string, string[]> = {
   ],
 };
 
-export default function AnalysisList() {
+type Props = {
+  onLogout: () => void;
+};
+
+export default function AnalysisList({
+  onLogout,
+}: Props) {
   const [data, setData] = useState<Analysis[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -165,7 +171,7 @@ export default function AnalysisList() {
     return `${value.toFixed(1)}%`;
   }, [detail]);
 
-  const token = localStorage.getItem(
+  const token = sessionStorage.getItem(
     "admin_access_token"
   );
 
@@ -225,7 +231,7 @@ export default function AnalysisList() {
       },
     }).then((res) => {
         if (res.status === 401) {
-          localStorage.removeItem(
+          sessionStorage.removeItem(
             "admin_access_token"
           );
 
@@ -280,7 +286,7 @@ export default function AnalysisList() {
     })
       .then(async (res) => {
         if (res.status === 401) {
-          localStorage.removeItem(
+          sessionStorage.removeItem(
             "admin_access_token"
           );
 
@@ -356,11 +362,41 @@ export default function AnalysisList() {
       >
         {/* LEFT */}
         <div className="admin-main">
+          <div className="admin-topbar">
+            <button
+              className="admin-floating-logout"
+              onClick={() => {
+                sessionStorage.removeItem(
+                  "admin_access_token"
+                );
+
+                onLogout();
+              }}
+            >
+              로그아웃
+            </button>
+          </div>
+          
           <section className="admin-hero">
             <div className="admin-hero-copy">
               분석 결과 목록
             </div>
+{/*
+            <div className="admin-hero-top">
+              <button
+                className="admin-logout-button"
+                onClick={() => {
+                  sessionStorage.removeItem(
+                    "admin_access_token"
+                  );
 
+                  onLogout();
+                }}
+              >
+                로그아웃
+              </button>
+            </div>
+*/}
             <div className="admin-hero-stats">
               <div className="admin-stat-card">
                 <span>전체 결과</span>
