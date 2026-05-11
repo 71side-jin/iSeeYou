@@ -39,7 +39,7 @@ export default function LoginPage({ onLoginSuccess }: Props) {
 
       const data = await response.json();
 
-      localStorage.setItem("admin_access_token", data.access_token);
+      sessionStorage.setItem("admin_access_token", data.access_token);
 
       onLoginSuccess();
     } catch (error) {
