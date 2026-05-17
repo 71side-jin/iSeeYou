@@ -7,43 +7,13 @@ import {
   fetchAdminJson,
   fetchAdminResponse,
 } from "../api/adminApi";
+import AnalysisDetailPanel from "../components/AnalysisDetailPanel";
 import "../css/AnalysisList.css";
-
-type Analysis = {
-  id: string;
-  file_name: string;
-  status: string;
-  result_label: string | null;
-  confidence: number | null;
-  model_type: string;
-  model_name: string;
-  created_at: string;
-};
-
-type AnalysisListResponse = {
-  items: Analysis[];
-  total: number;
-  total_pages: number;
-};
-
-type AnalysisDetail = {
-  id: string;
-  file_name: string;
-  storage_key: string;
-
-  result_label: string | null;
-  confidence: number | null;
-  inference_time_ms: number | null;
-
-  text_preview?: string;
-
-  logs: {
-    id: number;
-    event_type: string;
-    message: string | null;
-    created_at: string;
-  }[];
-};
+import type {
+  Analysis,
+  AnalysisDetail,
+  AnalysisListResponse,
+} from "../types/analysis";
 
 const MODEL_TYPE_OPTIONS = [
   "text",
@@ -73,12 +43,10 @@ const MODEL_NAME_MAP: Record<string, string[]> = {
     "text-ai-detector",
     "text-fact-check",
   ],
-
   image: [
     "image-fast",
     "image-precision",
   ],
-
   video: [
     "video-openclip",
     "video-flava",
@@ -87,7 +55,6 @@ const MODEL_NAME_MAP: Record<string, string[]> = {
     "video-frequency",
     "video-scenegraph",
   ],
-
   multimodal: [
     "mm-openclip",
     "mm-flava",
@@ -102,85 +69,32 @@ type Props = {
   onLogout: () => void;
 };
 
-export default function AnalysisList({
-  onLogout,
-}: Props) {
+export default function AnalysisList({ onLogout }: Props) {
   const [data, setData] = useState<Analysis[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const [selectedId, setSelectedId] =
-    useState<string | null>(null);
-
-  const [selectedItem, setSelectedItem] =
-    useState<Analysis | null>(null);
-
-  const [detail, setDetail] =
-    useState<AnalysisDetail | null>(null);
-
-  const [statusFilter, setStatusFilter] =
-    useState("all");
-
-  const [resultFilter, setResultFilter] =
-    useState("all");
-
-  const [modelTypeFilter, setModelTypeFilter] =
-    useState("all");
-
-  const [modelNameFilter, setModelNameFilter] =
-    useState("all");
-
-  const [sortOrder, setSortOrder] =
-    useState<"desc" | "asc">("desc");
-
-  const [currentPage, setCurrentPage] =
-    useState(1);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<Analysis | null>(null);
+  const [detail, setDetail] = useState<AnalysisDetail | null>(null);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [resultFilter, setResultFilter] = useState("all");
+  const [modelTypeFilter, setModelTypeFilter] = useState("all");
+  const [modelNameFilter, setModelNameFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [textContent, setTextContent] = useState("");
+  const [previewBlobUrl, setPreviewBlobUrl] = useState("");
 
   const itemsPerPage = 10;
-
-  const [totalPages, setTotalPages] =
-    useState(1);
-
-  const [totalCount, setTotalCount] =
-    useState(0);
-
-  const [textContent, setTextContent] =
-    useState<string>("");
-
-  const [previewBlobUrl, setPreviewBlobUrl] =
-    useState<string>("");
 
   const modelNameOptions = useMemo(() => {
     if (modelTypeFilter === "all") {
       return [];
     }
+
     return MODEL_NAME_MAP[modelTypeFilter] ?? [];
   }, [modelTypeFilter]);
-
-  const realScore = useMemo(() => {
-    if (!detail || detail.confidence == null) {
-      return "-";
-    }
-
-    const value =
-      detail.result_label === "REAL"
-        ? detail.confidence * 100
-        : (1 - detail.confidence) * 100;
-
-    return `${value.toFixed(1)}%`;
-  }, [detail]);
-
-  const fakeScore = useMemo(() => {
-    if (!detail || detail.confidence == null) {
-      return "-";
-    }
-
-    const value =
-      detail.result_label === "FAKE"
-        ? detail.confidence * 100
-        : (1 - detail.confidence) * 100;
-
-    return `${value.toFixed(1)}%`;
-  }, [detail]);
 
   function updateFilter(
     setter: (value: string) => void,
@@ -215,42 +129,14 @@ export default function AnalysisList({
     setLoading(true);
   }
 
-  const handleDownload = async () => {
-    if (!selectedId || !selectedItem) {
-      return;
-    }
+  function closeDetailPanel() {
+    setSelectedId(null);
+    setSelectedItem(null);
+    setDetail(null);
+    setPreviewBlobUrl("");
+    setTextContent("");
+  }
 
-    try {
-      const res = await fetchAdminResponse(
-        `${ADMIN_ANALYSIS_API}/${selectedId}/download`
-      );
-
-      const blob = await res.blob();
-
-      const url =
-        window.URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-
-      a.href = url;
-
-      a.download =
-        selectedItem.file_name;
-
-      document.body.appendChild(a);
-
-      a.click();
-
-      a.remove();
-
-      window.URL.revokeObjectURL(url);
-
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  // 목록 fetch
   useEffect(() => {
     const params = new URLSearchParams();
 
@@ -277,10 +163,10 @@ export default function AnalysisList({
     fetchAdminJson<AnalysisListResponse>(
       `${ADMIN_ANALYSIS_API}?${params}`
     )
-      .then((res: AnalysisListResponse) => {
-        setData(res.items);
-        setTotalPages(res.total_pages);
-        setTotalCount(res.total);
+      .then((response) => {
+        setData(response.items);
+        setTotalPages(response.total_pages);
+        setTotalCount(response.total);
         setLoading(false);
       })
       .catch((error) => {
@@ -296,20 +182,18 @@ export default function AnalysisList({
     sortOrder,
   ]);
 
-  // detail fetch
   useEffect(() => {
-    if (!selectedId) return;
+    if (!selectedId) {
+      return;
+    }
 
     fetchAdminJson<AnalysisDetail>(
       `${ADMIN_ANALYSIS_API}/${selectedId}`
     )
-      .then((res: AnalysisDetail) => {
-        setDetail(res);
-      })
+      .then(setDetail)
       .catch(console.error);
   }, [selectedId]);
 
-  // preview fetch
   useEffect(() => {
     if (!selectedId || !selectedItem) {
       return;
@@ -318,25 +202,18 @@ export default function AnalysisList({
     let objectUrl = "";
 
     fetchAdminResponse(`${ADMIN_ANALYSIS_API}/${selectedId}/preview`)
-      .then(async (res) => {
-        if (
-          selectedItem.model_type === "text"
-        ) {
-          const text = await res.text();
+      .then(async (response) => {
+        if (selectedItem.model_type === "text") {
+          const text = await response.text();
 
           setTextContent(text);
-
-          return null;
+          return;
         }
 
-        const blob = await res.blob();
+        const blob = await response.blob();
 
-        objectUrl =
-          URL.createObjectURL(blob);
-
+        objectUrl = URL.createObjectURL(blob);
         setPreviewBlobUrl(objectUrl);
-
-        return null;
       })
       .catch(console.error);
 
@@ -350,7 +227,6 @@ export default function AnalysisList({
   const pageNumbers = useMemo(() => {
     const pages: number[] = [];
     const max = 5;
-
     let start = Math.max(1, currentPage - 2);
     let end = start + max - 1;
 
@@ -359,8 +235,8 @@ export default function AnalysisList({
       start = Math.max(1, end - max + 1);
     }
 
-    for (let i = start; i <= end; i++) {
-      pages.push(i);
+    for (let page = start; page <= end; page += 1) {
+      pages.push(page);
     }
 
     return pages;
@@ -378,12 +254,7 @@ export default function AnalysisList({
 
   return (
     <div className="admin-shell">
-      <main
-        className={`admin-page ${
-          detail ? "has-panel" : ""
-        }`}
-      >
-        {/* LEFT */}
+      <main className={`admin-page ${detail ? "has-panel" : ""}`}>
         <div className="admin-main">
           <div className="admin-topbar">
             <button
@@ -396,7 +267,7 @@ export default function AnalysisList({
               로그아웃
             </button>
           </div>
-          
+
           <section className="admin-hero">
             <div className="admin-hero-copy">분석 결과 목록</div>
 
@@ -422,15 +293,12 @@ export default function AnalysisList({
             <FilterField
               label="상태"
               value={statusFilter}
-              onChange={(value) =>
-                updateFilter(setStatusFilter, value)
-              }
+              onChange={(value) => updateFilter(setStatusFilter, value)}
               options={[
                 { value: "all", label: "전체" },
-
-                ...STATUS_OPTIONS.map((s) => ({
-                  value: s,
-                  label: s,
+                ...STATUS_OPTIONS.map((status) => ({
+                  value: status,
+                  label: status,
                 })),
               ]}
             />
@@ -438,15 +306,12 @@ export default function AnalysisList({
             <FilterField
               label="결과"
               value={resultFilter}
-              onChange={(value) =>
-                updateFilter(setResultFilter, value)
-              }
+              onChange={(value) => updateFilter(setResultFilter, value)}
               options={[
                 { value: "all", label: "전체" },
-
-                ...RESULT_OPTIONS.map((r) => ({
-                  value: r,
-                  label: r,
+                ...RESULT_OPTIONS.map((result) => ({
+                  value: result,
+                  label: result,
                 })),
               ]}
             />
@@ -457,10 +322,9 @@ export default function AnalysisList({
               onChange={updateModelTypeFilter}
               options={[
                 { value: "all", label: "전체" },
-
-                ...MODEL_TYPE_OPTIONS.map((t) => ({
-                  value: t,
-                  label: t,
+                ...MODEL_TYPE_OPTIONS.map((type) => ({
+                  value: type,
+                  label: type,
                 })),
               ]}
             />
@@ -472,7 +336,6 @@ export default function AnalysisList({
               disabled={modelTypeFilter === "all"}
               options={[
                 { value: "all", label: "전체" },
-
                 ...modelNameOptions.map((name) => ({
                   value: name,
                   label: name,
@@ -485,14 +348,8 @@ export default function AnalysisList({
               value={sortOrder}
               onChange={updateSortOrder}
               options={[
-                {
-                  value: "desc",
-                  label: "최신순",
-                },
-                {
-                  value: "asc",
-                  label: "오래된순",
-                },
+                { value: "desc", label: "최신순" },
+                { value: "asc", label: "오래된순" },
               ]}
             />
           </section>
@@ -534,23 +391,18 @@ export default function AnalysisList({
 
                       <Td>
                         {item.result_label && (
-                          <span className={`admin-badge result-${item.result_label.toLowerCase()}`}>
+                          <span
+                            className={`admin-badge result-${item.result_label.toLowerCase()}`}
+                          >
                             {item.result_label}
                           </span>
                         )}
                       </Td>
 
-                      <Td>
-                        {item.confidence != null ? `${(item.confidence * 100).toFixed(1)}%` : "-"}
-                      </Td>
-
+                      <Td>{formatConfidence(item.confidence)}</Td>
                       <Td>{item.model_type}</Td>
-
                       <Td>{item.model_name}</Td>
-
-                      <Td>
-                        {new Date(item.created_at).toLocaleString()}
-                      </Td>
+                      <Td>{new Date(item.created_at).toLocaleString()}</Td>
                     </tr>
                   ))}
                 </tbody>
@@ -559,24 +411,28 @@ export default function AnalysisList({
 
             <div className="admin-pagination">
               <PageButton
-                onClick={() => updateCurrentPage(Math.max(currentPage - 1, 1))}
+                onClick={() =>
+                  updateCurrentPage(Math.max(currentPage - 1, 1))
+                }
                 disabled={currentPage === 1}
               >
                 이전
               </PageButton>
 
-              {pageNumbers.map((p) => (
+              {pageNumbers.map((page) => (
                 <PageButton
-                  key={p}
-                  onClick={() => updateCurrentPage(p)}
-                  active={p === currentPage}
+                  key={page}
+                  onClick={() => updateCurrentPage(page)}
+                  active={page === currentPage}
                 >
-                  {p}
+                  {page}
                 </PageButton>
               ))}
 
               <PageButton
-                onClick={() => updateCurrentPage(Math.min(currentPage + 1, totalPages))}
+                onClick={() =>
+                  updateCurrentPage(Math.min(currentPage + 1, totalPages))
+                }
                 disabled={currentPage === totalPages}
               >
                 다음
@@ -585,166 +441,21 @@ export default function AnalysisList({
           </section>
         </div>
 
-        {/* RIGHT PANEL */}
-        {detail && selectedItem && (
-          <div className="admin-panel-wrapper">
-            <button
-              className="admin-panel-close"
-              onClick={() => {
-                setSelectedId(null);
-                setSelectedItem(null);
-                setDetail(null);
-                setPreviewBlobUrl("");
-                setTextContent("");
-              }}
-            >
-              ✕
-            </button>
-
-            <aside className="admin-side-panel">
-              <div className="panel-table">
-                <table>
-                  <tbody>
-                    <tr>
-                      <th>파일명</th>
-                      <td colSpan={5}>{selectedItem.file_name}</td>
-                    </tr>
-
-                    <tr>
-                      <th>상태</th>
-                      <td>
-                        <span className={`admin-badge status-${selectedItem.status}`}>
-                          {selectedItem.status}
-                        </span>
-                      </td>
-
-                      <th>결과</th>
-                      <td>
-                        {selectedItem.result_label && (
-                          <span className={`admin-badge result-${selectedItem.result_label.toLowerCase()}`}>
-                            {selectedItem.result_label}
-                          </span>
-                        )}
-                      </td>
-
-                      <th>신뢰도</th>
-                      <td>
-                        {selectedItem.confidence != null ? `${(selectedItem.confidence * 100).toFixed(1)}%` : "-"}
-                      </td>
-                    </tr>
-
-                    <tr>
-                      <th>모델타입</th>
-                      <td colSpan={2}>{selectedItem.model_type}</td>
-
-                      <th>모델이름</th>
-                      <td colSpan={2}>{selectedItem.model_name}</td>
-                    </tr>
-
-                    <tr>
-                      <th>시간</th>
-                      <td colSpan={5}>
-                        {new Date(selectedItem.created_at).toLocaleString()}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {/* 미리보기 + 점수 */}
-              <div className="panel-row">
-                <div className="panel-preview">
-                  <button
-                    className="preview-download-button"
-                    onClick={handleDownload}
-                  >
-                    다운로드
-                  </button>
-
-                  {!selectedId && (
-                    <div className="preview-empty">미리보기 없음</div>
-                  )}
-
-                  {selectedItem?.model_type === "image" && (
-                    <img
-                      src={previewBlobUrl}
-                      alt={selectedItem.file_name}
-                      className="panel-preview-media"
-                    />
-                  )}
-
-                  {(selectedItem?.model_type === "video" ||
-                    selectedItem?.model_type === "multimodal") && (
-                    <video
-                      src={previewBlobUrl}
-                      controls
-                      className="panel-preview-media"
-                    />
-                  )}
-
-                  {selectedItem?.model_type === "text" && (
-                    <pre className="panel-text-preview">{textContent}</pre>
-                  )}
-
-                </div>
-
-                <div className="panel-score">
-                  <div>Real Score</div>
-                  <div>{realScore}</div>
-
-                  <div>Fake Score</div>
-                  <div>{fakeScore}</div>
-
-                  <div>Latency</div>
-                  <div>
-                    {detail.inference_time_ms != null ? `${detail.inference_time_ms}ms` : "-"}
-                  </div>
-                </div>
-              </div>
-
-              {/* 타임라인 */}
-              <div className="timeline-table">
-                <div className="timeline-side">타임라인</div>
-
-                <div className="timeline-rows">
-                  {detail.logs
-                    .filter(
-                      (log) =>
-                        log.event_type ===
-                          "processing_started" ||
-                        log.event_type ===
-                          "processing_finished"
-                    )
-                    .map((log) => {
-                      const label =
-                        log.event_type ===
-                        "processing_started"
-                          ? "Analysis started"
-                          : "Analysis completed";
-
-                      return (
-                        <div key={log.id} className="timeline-row">
-
-                          <div className="timeline-event">{label}</div>
-
-                          <div className="timeline-time">
-                            {new Date(log.created_at).toLocaleString()}
-                          </div>
-
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-            </aside>
-          </div>
+        {detail && selectedItem && selectedId && (
+          <AnalysisDetailPanel
+            detail={detail}
+            selectedId={selectedId}
+            selectedItem={selectedItem}
+            previewBlobUrl={previewBlobUrl}
+            textContent={textContent}
+            onClose={closeDetailPanel}
+          />
         )}
       </main>
     </div>
   );
 }
 
-/* UI */
 type FilterFieldProps = {
   label: string;
   value: string;
@@ -767,13 +478,13 @@ function FilterField({
       <select
         className="admin-filter-select"
         value={value}
-        onChange={(e) =>
-          onChange(e.target.value)
-        }
+        onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
       >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
         ))}
       </select>
     </div>
@@ -785,18 +496,14 @@ type ChildrenProps = {
 };
 
 function Th({ children }: ChildrenProps) {
-  return (
-    <th className="admin-th">{children}</th>
-  );
+  return <th className="admin-th">{children}</th>;
 }
 
 function Td({
   children,
   className = "",
 }: ChildrenProps & { className?: string }) {
-  return (
-    <td className={`admin-td ${className}`}>{children}</td>
-  );
+  return <td className={`admin-td ${className}`}>{children}</td>;
 }
 
 function PageButton({
@@ -811,9 +518,7 @@ function PageButton({
 }) {
   return (
     <button
-      className={`admin-page-button ${
-        active ? "is-active" : ""
-      }`}
+      className={`admin-page-button ${active ? "is-active" : ""}`}
       onClick={onClick}
       disabled={disabled}
     >
@@ -821,3 +526,10 @@ function PageButton({
     </button>
   );
 }
+
+function formatConfidence(confidence: number | null) {
+  return confidence != null
+    ? `${(confidence * 100).toFixed(1)}%`
+    : "-";
+}
+
