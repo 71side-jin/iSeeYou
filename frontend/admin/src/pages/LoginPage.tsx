@@ -1,4 +1,10 @@
-import { FormEvent, useState } from "react";
+import { useState } from "react";
+import type { FormEvent } from "react";
+
+import {
+  ADMIN_AUTH_API,
+  setAdminToken,
+} from "../api/adminApi";
 import "../css/LoginPage.css";
 
 type Props = {
@@ -20,7 +26,7 @@ export default function LoginPage({ onLoginSuccess }: Props) {
 
     try {
       const response = await fetch(
-        "http://localhost:8000/api/admin/auth/login",
+        `${ADMIN_AUTH_API}/login`,
         {
           method: "POST",
           headers: {
@@ -39,7 +45,7 @@ export default function LoginPage({ onLoginSuccess }: Props) {
 
       const data = await response.json();
 
-      sessionStorage.setItem("admin_access_token", data.access_token);
+      setAdminToken(data.access_token);
 
       onLoginSuccess();
     } catch (error) {
@@ -89,9 +95,7 @@ export default function LoginPage({ onLoginSuccess }: Props) {
           </div>
 
           {errorMessage && (
-            <div className="login-error">
-              {errorMessage}
-            </div>
+            <div className="login-error">{errorMessage}</div>
           )}
 
           <button

@@ -1,19 +1,13 @@
 from fastapi import FastAPI
-from app.api.public.health import router as health_router
-from app.api.public.analysis import router as analysis_router
+from fastapi.middleware.cors import CORSMiddleware
+
 from app.api.admin.analysis import router as admin_analysis_router
+from app.api.admin.auth import router as admin_auth_router
 from app.api.admin.stats import router as admin_stats_router
+from app.api.public.analysis import router as analysis_router
+from app.api.public.health import router as health_router
 
 app = FastAPI(title="I SEE YOU API")
-
-app.include_router(health_router, prefix="/api/public")
-app.include_router(analysis_router, prefix="/api/public")
-
-app.include_router(admin_analysis_router, prefix="/api/admin")
-app.include_router(admin_stats_router, prefix="/api/admin")
-
-
-from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
@@ -23,7 +17,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-from app.api.admin.auth import router as admin_auth_router
-
-app.include_router(admin_auth_router, prefix="/api/admin")
+for router, prefix in (
+    (health_router, "/api/public"),
+    (analysis_router, "/api/public"),
+    (admin_auth_router, "/api/admin"),
+    (admin_analysis_router, "/api/admin"),
+    (admin_stats_router, "/api/admin"),
+):
+    app.include_router(router, prefix=prefix)

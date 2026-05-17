@@ -136,7 +136,7 @@
   height: 58px;
   margin-top: 32px;
 
-  border-radius: 999px;
+  border-radius: var(--radius-md);
 
   background:
     linear-gradient(
