@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
 
 import {
   ADMIN_ANALYSIS_API,
@@ -7,63 +6,27 @@ import {
   fetchAdminJson,
   fetchAdminResponse,
 } from "../api/adminApi";
+
+import { PageButton, Td, Th } from "../components/AdminTable";
+
 import AnalysisDetailPanel from "../components/AnalysisDetailPanel";
+
+import FilterField from "../components/FilterField";
+
+import {
+  MODEL_NAME_MAP,
+  MODEL_TYPE_OPTIONS,
+  RESULT_OPTIONS,
+  STATUS_OPTIONS,
+} from "../constants/analysisFilters";
+
 import "../css/AnalysisList.css";
+
 import type {
   Analysis,
   AnalysisDetail,
   AnalysisListResponse,
 } from "../types/analysis";
-
-const MODEL_TYPE_OPTIONS = [
-  "text",
-  "image",
-  "video",
-  "multimodal",
-];
-
-const STATUS_OPTIONS = [
-  "processing",
-  "success",
-  "failed",
-];
-
-const RESULT_OPTIONS = [
-  "REAL",
-  "FAKE",
-];
-
-type SelectOption = {
-  value: string;
-  label: string;
-};
-
-const MODEL_NAME_MAP: Record<string, string[]> = {
-  text: [
-    "text-ai-detector",
-    "text-fact-check",
-  ],
-  image: [
-    "image-fast",
-    "image-precision",
-  ],
-  video: [
-    "video-openclip",
-    "video-flava",
-    "video-blip-nli",
-    "video-avsync",
-    "video-frequency",
-    "video-scenegraph",
-  ],
-  multimodal: [
-    "mm-openclip",
-    "mm-flava",
-    "mm-blip-nli",
-    "mm-avsync",
-    "mm-frequency",
-    "mm-scenegraph",
-  ],
-};
 
 type Props = {
   onLogout: () => void;
@@ -453,77 +416,6 @@ export default function AnalysisList({ onLogout }: Props) {
         )}
       </main>
     </div>
-  );
-}
-
-type FilterFieldProps = {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: SelectOption[];
-  disabled?: boolean;
-};
-
-function FilterField({
-  label,
-  value,
-  onChange,
-  options,
-  disabled,
-}: FilterFieldProps) {
-  return (
-    <div className="admin-filter-field">
-      <label className="admin-filter-label">{label}</label>
-
-      <select
-        className="admin-filter-select"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        disabled={disabled}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-type ChildrenProps = {
-  children: ReactNode;
-};
-
-function Th({ children }: ChildrenProps) {
-  return <th className="admin-th">{children}</th>;
-}
-
-function Td({
-  children,
-  className = "",
-}: ChildrenProps & { className?: string }) {
-  return <td className={`admin-td ${className}`}>{children}</td>;
-}
-
-function PageButton({
-  children,
-  onClick,
-  active,
-  disabled,
-}: ChildrenProps & {
-  onClick: () => void;
-  active?: boolean;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      className={`admin-page-button ${active ? "is-active" : ""}`}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      {children}
-    </button>
   );
 }
 
