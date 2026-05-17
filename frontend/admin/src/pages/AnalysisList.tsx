@@ -175,6 +175,50 @@ export default function AnalysisList({
     "admin_access_token"
   );
 
+  const handleDownload = async () => {
+    if (!selectedId || !selectedItem) {
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `${API_BASE}/${selectedId}/download`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error("download failed");
+      }
+
+      const blob = await res.blob();
+
+      const url =
+        window.URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+
+      a.href = url;
+
+      a.download =
+        selectedItem.file_name;
+
+      document.body.appendChild(a);
+
+      a.click();
+
+      a.remove();
+
+      window.URL.revokeObjectURL(url);
+
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
     if (modelTypeFilter === "all") {
       setModelNameFilter("all");
@@ -702,6 +746,12 @@ export default function AnalysisList({
               {/* 미리보기 + 점수 */}
               <div className="panel-row">
                 <div className="panel-preview">
+                  <button
+                    className="preview-download-button"
+                    onClick={handleDownload}
+                  >
+                    다운로드
+                  </button>
 
                   {!selectedId && (
                     <div className="preview-empty">
@@ -749,6 +799,41 @@ export default function AnalysisList({
                       ? `${detail.inference_time_ms}ms`
                       : "-"}
                   </div>
+                </div>
+              </div>
+
+              {/* 타임라인 */}
+              <div className="timeline-table">
+                <div className="timeline-side">타임라인</div>
+
+                <div className="timeline-rows">
+                  {detail.logs
+                    .filter(
+                      (log) =>
+                        log.event_type ===
+                          "processing_started" ||
+                        log.event_type ===
+                          "processing_finished"
+                    )
+                    .map((log) => {
+                      const label =
+                        log.event_type ===
+                        "processing_started"
+                          ? "Analysis started"
+                          : "Analysis completed";
+
+                      return (
+                        <div key={log.id} className="timeline-row">
+
+                          <div className="timeline-event">{label}</div>
+
+                          <div className="timeline-time">
+                            {new Date(log.created_at).toLocaleString()}
+                          </div>
+
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
             </aside>
