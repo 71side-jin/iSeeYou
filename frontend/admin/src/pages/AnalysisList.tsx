@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import "../css/AnalysisList.css";
+import type { ReactNode } from "react";
 
-const API_BASE = "http://localhost:8000/api/admin/analysis";
+import {
+  ADMIN_ANALYSIS_API,
+  clearAdminToken,
+  fetchAdminJson,
+  fetchAdminResponse,
+} from "../api/adminApi";
+import "../css/AnalysisList.css";
 
 type Analysis = {
   id: string;
@@ -56,6 +62,11 @@ const RESULT_OPTIONS = [
   "REAL",
   "FAKE",
 ];
+
+type SelectOption = {
+  value: string;
+  label: string;
+};
 
 const MODEL_NAME_MAP: Record<string, string[]> = {
   text: [
@@ -171,9 +182,38 @@ export default function AnalysisList({
     return `${value.toFixed(1)}%`;
   }, [detail]);
 
-  const token = sessionStorage.getItem(
-    "admin_access_token"
-  );
+  function updateFilter(
+    setter: (value: string) => void,
+    value: string
+  ) {
+    setter(value);
+    setCurrentPage(1);
+    setLoading(true);
+  }
+
+  function updateSortOrder(value: string) {
+    setSortOrder(value as "desc" | "asc");
+    setCurrentPage(1);
+    setLoading(true);
+  }
+
+  function updateModelTypeFilter(value: string) {
+    setModelTypeFilter(value);
+    setModelNameFilter((current) => {
+      const validModels = MODEL_NAME_MAP[value] ?? [];
+
+      return value === "all" || !validModels.includes(current)
+        ? "all"
+        : current;
+    });
+    setCurrentPage(1);
+    setLoading(true);
+  }
+
+  function updateCurrentPage(value: number) {
+    setCurrentPage(value);
+    setLoading(true);
+  }
 
   const handleDownload = async () => {
     if (!selectedId || !selectedItem) {
@@ -181,18 +221,9 @@ export default function AnalysisList({
     }
 
     try {
-      const res = await fetch(
-        `${API_BASE}/${selectedId}/download`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      const res = await fetchAdminResponse(
+        `${ADMIN_ANALYSIS_API}/${selectedId}/download`
       );
-
-      if (!res.ok) {
-        throw new Error("download failed");
-      }
 
       const blob = await res.blob();
 
@@ -219,30 +250,6 @@ export default function AnalysisList({
     }
   };
 
-  useEffect(() => {
-    if (modelTypeFilter === "all") {
-      setModelNameFilter("all");
-      return;
-    }
-
-    const validModels =
-      MODEL_NAME_MAP[modelTypeFilter] ?? [];
-
-    if (!validModels.includes(modelNameFilter)) {
-      setModelNameFilter("all");
-    }
-  }, [modelTypeFilter, modelNameFilter]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [
-    statusFilter,
-    resultFilter,
-    modelTypeFilter,
-    modelNameFilter,
-    sortOrder,
-  ]);
-
   // 목록 fetch
   useEffect(() => {
     const params = new URLSearchParams();
@@ -267,29 +274,17 @@ export default function AnalysisList({
       params.set("model_name", modelNameFilter);
     }
 
-    setLoading(true);
-
-    fetch(`${API_BASE}?${params}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }).then((res) => {
-        if (res.status === 401) {
-          sessionStorage.removeItem(
-            "admin_access_token"
-          );
-
-          window.location.reload();
-
-          throw new Error("Unauthorized");
-        }
-
-        return res.json();
-      })
+    fetchAdminJson<AnalysisListResponse>(
+      `${ADMIN_ANALYSIS_API}?${params}`
+    )
       .then((res: AnalysisListResponse) => {
         setData(res.items);
         setTotalPages(res.total_pages);
         setTotalCount(res.total);
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error(error);
         setLoading(false);
       });
   }, [
@@ -305,14 +300,13 @@ export default function AnalysisList({
   useEffect(() => {
     if (!selectedId) return;
 
-    fetch(`${API_BASE}/${selectedId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }).then((res) => res.json())
+    fetchAdminJson<AnalysisDetail>(
+      `${ADMIN_ANALYSIS_API}/${selectedId}`
+    )
       .then((res: AnalysisDetail) => {
         setDetail(res);
-      });
+      })
+      .catch(console.error);
   }, [selectedId]);
 
   // preview fetch
@@ -323,22 +317,8 @@ export default function AnalysisList({
 
     let objectUrl = "";
 
-    fetch(`${API_BASE}/${selectedId}/preview`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
+    fetchAdminResponse(`${ADMIN_ANALYSIS_API}/${selectedId}/preview`)
       .then(async (res) => {
-        if (res.status === 401) {
-          sessionStorage.removeItem(
-            "admin_access_token"
-          );
-
-          window.location.reload();
-
-          throw new Error("Unauthorized");
-        }
-
         if (
           selectedItem.model_type === "text"
         ) {
@@ -357,7 +337,8 @@ export default function AnalysisList({
         setPreviewBlobUrl(objectUrl);
 
         return null;
-      });
+      })
+      .catch(console.error);
 
     return () => {
       if (objectUrl) {
@@ -389,9 +370,7 @@ export default function AnalysisList({
     return (
       <div className="admin-shell">
         <main className="admin-page">
-          <section className="admin-loading-panel">
-            Loading...
-          </section>
+          <section className="admin-loading-panel">Loading...</section>
         </main>
       </div>
     );
@@ -410,10 +389,7 @@ export default function AnalysisList({
             <button
               className="admin-floating-logout"
               onClick={() => {
-                sessionStorage.removeItem(
-                  "admin_access_token"
-                );
-
+                clearAdminToken();
                 onLogout();
               }}
             >
@@ -422,25 +398,8 @@ export default function AnalysisList({
           </div>
           
           <section className="admin-hero">
-            <div className="admin-hero-copy">
-              분석 결과 목록
-            </div>
-{/*
-            <div className="admin-hero-top">
-              <button
-                className="admin-logout-button"
-                onClick={() => {
-                  sessionStorage.removeItem(
-                    "admin_access_token"
-                  );
+            <div className="admin-hero-copy">분석 결과 목록</div>
 
-                  onLogout();
-                }}
-              >
-                로그아웃
-              </button>
-            </div>
-*/}
             <div className="admin-hero-stats">
               <div className="admin-stat-card">
                 <span>전체 결과</span>
@@ -463,7 +422,9 @@ export default function AnalysisList({
             <FilterField
               label="상태"
               value={statusFilter}
-              onChange={setStatusFilter}
+              onChange={(value) =>
+                updateFilter(setStatusFilter, value)
+              }
               options={[
                 { value: "all", label: "전체" },
 
@@ -477,7 +438,9 @@ export default function AnalysisList({
             <FilterField
               label="결과"
               value={resultFilter}
-              onChange={setResultFilter}
+              onChange={(value) =>
+                updateFilter(setResultFilter, value)
+              }
               options={[
                 { value: "all", label: "전체" },
 
@@ -491,7 +454,7 @@ export default function AnalysisList({
             <FilterField
               label="모델 타입"
               value={modelTypeFilter}
-              onChange={setModelTypeFilter}
+              onChange={updateModelTypeFilter}
               options={[
                 { value: "all", label: "전체" },
 
@@ -505,7 +468,7 @@ export default function AnalysisList({
             <FilterField
               label="모델 이름"
               value={modelNameFilter}
-              onChange={setModelNameFilter}
+              onChange={(value) => updateFilter(setModelNameFilter, value)}
               disabled={modelTypeFilter === "all"}
               options={[
                 { value: "all", label: "전체" },
@@ -520,9 +483,7 @@ export default function AnalysisList({
             <FilterField
               label="시간 정렬"
               value={sortOrder}
-              onChange={(v) =>
-                setSortOrder(v as "asc" | "desc")
-              }
+              onChange={updateSortOrder}
               options={[
                 {
                   value: "desc",
@@ -536,9 +497,7 @@ export default function AnalysisList({
             />
           </section>
 
-          <div className="admin-total-row">
-            총 {totalCount}개
-          </div>
+          <div className="admin-total-row">총 {totalCount}개</div>
 
           <section className="admin-table-panel">
             <div className="admin-table-scroll">
@@ -565,34 +524,24 @@ export default function AnalysisList({
                         setSelectedItem(item);
                       }}
                     >
-                      <Td className="is-file">
-                        {item.file_name}
-                      </Td>
+                      <Td className="is-file">{item.file_name}</Td>
 
                       <Td>
-                        <span
-                          className={`admin-badge status-${item.status}`}
-                        >
+                        <span className={`admin-badge status-${item.status}`}>
                           {item.status}
                         </span>
                       </Td>
 
                       <Td>
                         {item.result_label && (
-                          <span
-                            className={`admin-badge result-${item.result_label.toLowerCase()}`}
-                          >
+                          <span className={`admin-badge result-${item.result_label.toLowerCase()}`}>
                             {item.result_label}
                           </span>
                         )}
                       </Td>
 
                       <Td>
-                        {item.confidence != null
-                          ? `${(
-                              item.confidence * 100
-                            ).toFixed(1)}%`
-                          : "-"}
+                        {item.confidence != null ? `${(item.confidence * 100).toFixed(1)}%` : "-"}
                       </Td>
 
                       <Td>{item.model_type}</Td>
@@ -600,9 +549,7 @@ export default function AnalysisList({
                       <Td>{item.model_name}</Td>
 
                       <Td>
-                        {new Date(
-                          item.created_at
-                        ).toLocaleString()}
+                        {new Date(item.created_at).toLocaleString()}
                       </Td>
                     </tr>
                   ))}
@@ -612,11 +559,7 @@ export default function AnalysisList({
 
             <div className="admin-pagination">
               <PageButton
-                onClick={() =>
-                  setCurrentPage((p) =>
-                    Math.max(p - 1, 1)
-                  )
-                }
+                onClick={() => updateCurrentPage(Math.max(currentPage - 1, 1))}
                 disabled={currentPage === 1}
               >
                 이전
@@ -625,9 +568,7 @@ export default function AnalysisList({
               {pageNumbers.map((p) => (
                 <PageButton
                   key={p}
-                  onClick={() =>
-                    setCurrentPage(p)
-                  }
+                  onClick={() => updateCurrentPage(p)}
                   active={p === currentPage}
                 >
                   {p}
@@ -635,14 +576,8 @@ export default function AnalysisList({
               ))}
 
               <PageButton
-                onClick={() =>
-                  setCurrentPage((p) =>
-                    Math.min(p + 1, totalPages)
-                  )
-                }
-                disabled={
-                  currentPage === totalPages
-                }
+                onClick={() => updateCurrentPage(Math.min(currentPage + 1, totalPages))}
+                disabled={currentPage === totalPages}
               >
                 다음
               </PageButton>
@@ -672,71 +607,44 @@ export default function AnalysisList({
                   <tbody>
                     <tr>
                       <th>파일명</th>
-
-                      <td colSpan={5}>
-                        {selectedItem.file_name}
-                      </td>
+                      <td colSpan={5}>{selectedItem.file_name}</td>
                     </tr>
 
                     <tr>
                       <th>상태</th>
-
                       <td>
-                        <span
-                          className={`admin-badge status-${selectedItem.status}`}
-                        >
+                        <span className={`admin-badge status-${selectedItem.status}`}>
                           {selectedItem.status}
                         </span>
                       </td>
 
                       <th>결과</th>
-
                       <td>
                         {selectedItem.result_label && (
-                          <span
-                            className={`admin-badge result-${selectedItem.result_label.toLowerCase()}`}
-                          >
-                            {
-                              selectedItem.result_label
-                            }
+                          <span className={`admin-badge result-${selectedItem.result_label.toLowerCase()}`}>
+                            {selectedItem.result_label}
                           </span>
                         )}
                       </td>
 
                       <th>신뢰도</th>
-
                       <td>
-                        {selectedItem.confidence !=
-                        null
-                          ? `${(
-                              selectedItem.confidence *
-                              100
-                            ).toFixed(1)}%`
-                          : "-"}
+                        {selectedItem.confidence != null ? `${(selectedItem.confidence * 100).toFixed(1)}%` : "-"}
                       </td>
                     </tr>
 
                     <tr>
                       <th>모델타입</th>
-
-                      <td colSpan={2}>
-                        {selectedItem.model_type}
-                      </td>
+                      <td colSpan={2}>{selectedItem.model_type}</td>
 
                       <th>모델이름</th>
-
-                      <td colSpan={2}>
-                        {selectedItem.model_name}
-                      </td>
+                      <td colSpan={2}>{selectedItem.model_name}</td>
                     </tr>
 
                     <tr>
                       <th>시간</th>
-
                       <td colSpan={5}>
-                        {new Date(
-                          selectedItem.created_at
-                        ).toLocaleString()}
+                        {new Date(selectedItem.created_at).toLocaleString()}
                       </td>
                     </tr>
                   </tbody>
@@ -754,9 +662,7 @@ export default function AnalysisList({
                   </button>
 
                   {!selectedId && (
-                    <div className="preview-empty">
-                      미리보기 없음
-                    </div>
+                    <div className="preview-empty">미리보기 없음</div>
                   )}
 
                   {selectedItem?.model_type === "image" && (
@@ -777,9 +683,7 @@ export default function AnalysisList({
                   )}
 
                   {selectedItem?.model_type === "text" && (
-                    <pre className="panel-text-preview">
-                      {textContent}
-                    </pre>
+                    <pre className="panel-text-preview">{textContent}</pre>
                   )}
 
                 </div>
@@ -792,12 +696,8 @@ export default function AnalysisList({
                   <div>{fakeScore}</div>
 
                   <div>Latency</div>
-
                   <div>
-                    {detail.inference_time_ms !=
-                    null
-                      ? `${detail.inference_time_ms}ms`
-                      : "-"}
+                    {detail.inference_time_ms != null ? `${detail.inference_time_ms}ms` : "-"}
                   </div>
                 </div>
               </div>
@@ -845,18 +745,24 @@ export default function AnalysisList({
 }
 
 /* UI */
+type FilterFieldProps = {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: SelectOption[];
+  disabled?: boolean;
+};
+
 function FilterField({
   label,
   value,
   onChange,
   options,
   disabled,
-}: any) {
+}: FilterFieldProps) {
   return (
     <div className="admin-filter-field">
-      <label className="admin-filter-label">
-        {label}
-      </label>
+      <label className="admin-filter-label">{label}</label>
 
       <select
         className="admin-filter-select"
@@ -866,35 +772,30 @@ function FilterField({
         }
         disabled={disabled}
       >
-        {options.map((o: any) => (
-          <option
-            key={o.value}
-            value={o.value}
-          >
-            {o.label}
-          </option>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
         ))}
       </select>
     </div>
   );
 }
 
-function Th({ children }: any) {
+type ChildrenProps = {
+  children: ReactNode;
+};
+
+function Th({ children }: ChildrenProps) {
   return (
-    <th className="admin-th">
-      {children}
-    </th>
+    <th className="admin-th">{children}</th>
   );
 }
 
 function Td({
   children,
   className = "",
-}: any) {
+}: ChildrenProps & { className?: string }) {
   return (
-    <td className={`admin-td ${className}`}>
-      {children}
-    </td>
+    <td className={`admin-td ${className}`}>{children}</td>
   );
 }
 
@@ -903,7 +804,11 @@ function PageButton({
   onClick,
   active,
   disabled,
-}: any) {
+}: ChildrenProps & {
+  onClick: () => void;
+  active?: boolean;
+  disabled?: boolean;
+}) {
   return (
     <button
       className={`admin-page-button ${

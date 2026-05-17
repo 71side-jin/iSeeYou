@@ -1,18 +1,18 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import "./App.css";
 
+import {
+  clearAdminToken,
+  isAdminAuthenticated,
+} from "./api/adminApi";
 import AnalysisList from "./pages/AnalysisList";
 import LoginPage from "./pages/LoginPage";
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    const token = sessionStorage.getItem("admin_access_token");
-
-    setIsAuthenticated(!!token);
-  }, []);
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    () => isAdminAuthenticated()
+  );
 
   function handleLoginSuccess() {
     setIsAuthenticated(true);
@@ -27,10 +27,7 @@ export default function App() {
   }
 
   function handleLogout() {
-    sessionStorage.removeItem(
-      "admin_access_token"
-    );
-
+    clearAdminToken();
     setIsAuthenticated(false);
   }
 
